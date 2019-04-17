@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="PHP,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="TY·Loafer" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="自从线上接口报内存溢出的问题后，就一直想搭建一个性能分析的平台，但后来一直没有时间，知道后来出现了接口调用时间过长，才将这个任务提上议程。 我同事先前所在的部门使用了xhprof  + xhgui 的处理方式，但是研究后发现 xhprof 只支持到php5.6，无奈放弃了，同时，虽然 tideways 自己也提供了UI，但是炫酷的都是要收费的，综合考虑后，选用了 tideways + xhgui">
+<meta name="keywords" content="PHP">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PHP性能分析工具xhgui+tideways实践">
+<meta property="og:url" content="https://tyloafer.github.io/posts/7748/index.html">
+<meta property="og:site_name" content="TY·Loafer">
+<meta property="og:description" content="自从线上接口报内存溢出的问题后，就一直想搭建一个性能分析的平台，但后来一直没有时间，知道后来出现了接口调用时间过长，才将这个任务提上议程。 我同事先前所在的部门使用了xhprof  + xhgui 的处理方式，但是研究后发现 xhprof 只支持到php5.6，无奈放弃了，同时，虽然 tideways 自己也提供了UI，但是炫酷的都是要收费的，综合考虑后，选用了 tideways + xhgui">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://github-1253518569.cossh.myqcloud.com/mongo-exception.png">
+<meta property="og:updated_time" content="2019-04-17T03:23:46.321Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="PHP性能分析工具xhgui+tideways实践">
+<meta name="twitter:description" content="自从线上接口报内存溢出的问题后，就一直想搭建一个性能分析的平台，但后来一直没有时间，知道后来出现了接口调用时间过长，才将这个任务提上议程。 我同事先前所在的部门使用了xhprof  + xhgui 的处理方式，但是研究后发现 xhprof 只支持到php5.6，无奈放弃了，同时，虽然 tideways 自己也提供了UI，但是炫酷的都是要收费的，综合考虑后，选用了 tideways + xhgui">
+<meta name="twitter:image" content="http://github-1253518569.cossh.myqcloud.com/mongo-exception.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://tyloafer.github.io/posts/7748/">
+
+
+
+
+
+  <title>PHP性能分析工具xhgui+tideways实践 | TY·Loafer</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">TY·Loafer</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/7748/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">PHP性能分析工具xhgui+tideways实践</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-09-19T10:04:00+08:00">
+                2018-09-19
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-04-17T11:23:46+08:00">
+                2019-04-17
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/7748/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/7748/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>自从线上接口报内存溢出的问题后，就一直想搭建一个性能分析的平台，但后来一直没有时间，知道后来出现了接口调用时间过长，才将这个任务提上议程。</p>
+<p>我同事先前所在的部门使用了<code>xhprof</code>  + <code>xhgui</code> 的处理方式，但是研究后发现 <code>xhprof</code> 只支持到php5.6，无奈放弃了，同时，虽然 <code>tideways</code> 自己也提供了UI，但是炫酷的都是要收费的，综合考虑后，选用了 <code>tideways</code> + <code>xhgui</code>  的解决方案</p>
+<a id="more"></a>
+<h1 id="安装Tideways"><a href="#安装Tideways" class="headerlink" title="安装Tideways"></a>安装Tideways</h1><h2 id="安装PHP及扩展"><a href="#安装PHP及扩展" class="headerlink" title="安装PHP及扩展"></a>安装PHP及扩展</h2><p>在<code>https://webtatic.com/</code> 有每个版本的php的源，这里就简单过一下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">yum install epel-release</span><br><span class="line">rpm -Uvh https://mirror.webtatic.com/yum/el7/webtatic-release.rpm</span><br><span class="line">yum install php72w* --skip-broken</span><br></pre></td></tr></table></figure>
+<h2 id="安装Tideways-1"><a href="#安装Tideways-1" class="headerlink" title="安装Tideways"></a>安装Tideways</h2><p>我这里存放源码的目录是 <code>/data/local/</code> 下，目录是不会产生任何影响的，phpize编译完扩展后会自动拷贝到php的modules对应的目录的， 拷贝命令请去除注释</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/tideways/php-xhprof-extension.git   // 克隆下git文件</span><br><span class="line">cd php-xhprof-extension </span><br><span class="line">phpize  // 生成configure文件</span><br><span class="line">./configure</span><br><span class="line">make &amp;&amp; make install  // 安装</span><br><span class="line"></span><br><span class="line">// 开启php扩展</span><br><span class="line">echo &apos;</span><br><span class="line">; enable tideways_xhprof</span><br><span class="line">extension=tideways_xhprof.so</span><br><span class="line">tideways.auto_prepend_library=0&apos; &gt; /etc/php.d/tideways_xhprof.ini</span><br><span class="line"></span><br><span class="line">// 重启php-fpm</span><br><span class="line">service php-fpm restart</span><br></pre></td></tr></table></figure>
+<h1 id="安装xhgui"><a href="#安装xhgui" class="headerlink" title="安装xhgui"></a>安装xhgui</h1><p>这个项目放到一个web可访问的路径，这个最终是通过浏览器展示的</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/laynefyc/xhgui-branch.git // 汉化版</span><br><span class="line">// git clone https://github.com/perftools/xhgui.git  // 原版</span><br><span class="line">mv xhgui-branch xhgui</span><br><span class="line">cd xhgui</span><br><span class="line">chmod 777 cache // 把cache目录给与代码可读写的权限</span><br><span class="line">php install.php  // 安装xhgui</span><br></pre></td></tr></table></figure>
+<h1 id="安装MongoDB"><a href="#安装MongoDB" class="headerlink" title="安装MongoDB"></a>安装MongoDB</h1><h2 id="安装MongoDB-1"><a href="#安装MongoDB-1" class="headerlink" title="安装MongoDB"></a>安装MongoDB</h2><p>创建 <code>/etc/yum.repos.d/mongo.repo</code> 文件， 内容如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[mongodb-org-4.0]</span><br><span class="line">name=MongoDB Repository</span><br><span class="line">baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/4.0/x86_64/</span><br><span class="line">gpgcheck=1</span><br><span class="line">enabled=1</span><br><span class="line">gpgkey=https://www.mongodb.org/static/pgp/server-4.0.asc</span><br></pre></td></tr></table></figure>
+<p>使用yum安装</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install -y mongodb-org</span><br></pre></td></tr></table></figure>
+<p>启动</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">service mongod start</span><br></pre></td></tr></table></figure>
+<h2 id="添加索引"><a href="#添加索引" class="headerlink" title="添加索引"></a>添加索引</h2><p>tideways会将结果集存放在MongoDB中，当然是可以选择的，权衡一下，我们这里使用MongoDB</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">mongo</span><br><span class="line">&gt; use xhprof</span><br><span class="line">&gt; db.results.ensureIndex( &#123; &apos;meta.SERVER.REQUEST_TIME&apos; : -1 &#125; )</span><br><span class="line">&gt; db.results.ensureIndex( &#123; &apos;profile.main().wt&apos; : -1 &#125; )</span><br><span class="line">&gt; db.results.ensureIndex( &#123; &apos;profile.main().mu&apos; : -1 &#125; )</span><br><span class="line">&gt; db.results.ensureIndex( &#123; &apos;profile.main().cpu&apos; : -1 &#125; )</span><br><span class="line">&gt; db.results.ensureIndex( &#123; &apos;meta.url&apos; : 1 &#125; )</span><br><span class="line">&gt; db.results.ensureIndex( &#123; &apos;meta.simple_url&apos; : 1 &#125; )</span><br></pre></td></tr></table></figure>
+<h1 id="整合Tideways和Xhgui到项目"><a href="#整合Tideways和Xhgui到项目" class="headerlink" title="整合Tideways和Xhgui到项目"></a>整合Tideways和Xhgui到项目</h1><h2 id="整合代码"><a href="#整合代码" class="headerlink" title="整合代码"></a>整合代码</h2><p>汉化版xhgui的作者是建议如下使用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">server &#123;</span><br><span class="line">  listen 80;</span><br><span class="line">  server_name site.localhost;</span><br><span class="line">  root /Users/markstory/Sites/awesome-thing/app/webroot/;  // 汉化xhgui作者的目录，仅拷贝</span><br><span class="line">  fastcgi_param PHP_VALUE &quot;auto_prepend_file=/Users/markstory/Sites/xhgui/external/header.php&quot;; // 汉化xhgui作者的目录，仅拷贝</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里是你的需要做性能监控的web服务的nginx的配置</p>
+<p>但是，我在这样使用的时候，php-fpm在我调用的接口的时候就会自动挂掉，然后看了一下文件 <code>xhgui/external/header.php</code> ， 在这个里面，作者注册了<code>register_shutdown_function</code> 函数，我使用的框架是Yii2，其次，里面还会做判断各种扩展及存储方案，这个对于我已经确定了方案的用户来说，这种判断是没用的，相对还要消耗性能，所以这里根据header.php的逻辑，直接写入代码</p>
+<p>在beforeAction中加入 </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">private function startXhprof()</span><br><span class="line">&#123;</span><br><span class="line">    $dir = &apos;/data/www/html/xhgui&apos;;</span><br><span class="line">    // Use the callbacks defined in the configuration file</span><br><span class="line">    // to determine whether or not XHgui should enable profiling.</span><br><span class="line">    //</span><br><span class="line">    // Only load the config class so we don&apos;t pollute the host application&apos;s</span><br><span class="line">    // autoloaders.</span><br><span class="line">    require_once $dir . &apos;/src/Xhgui/Config.php&apos;;</span><br><span class="line">    \Xhgui_Config::load($dir . &apos;/config/config.default.php&apos;);</span><br><span class="line">    if (file_exists($dir . &apos;/config/config.php&apos;)) &#123;</span><br><span class="line">        \Xhgui_Config::load($dir . &apos;/config/config.php&apos;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    $filterPath = \Xhgui_Config::read(&apos;profiler.filter_path&apos;);</span><br><span class="line">    if(is_array($filterPath)&amp;&amp;in_array($_SERVER[&apos;DOCUMENT_ROOT&apos;],$filterPath))&#123;</span><br><span class="line">        return;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    if (!isset($_SERVER[&apos;REQUEST_TIME_FLOAT&apos;])) &#123;</span><br><span class="line">        $_SERVER[&apos;REQUEST_TIME_FLOAT&apos;] = microtime(true);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    tideways_xhprof_enable(TIDEWAYS_XHPROF_FLAGS_MEMORY | TIDEWAYS_XHPROF_FLAGS_MEMORY_MU | TIDEWAYS_XHPROF_FLAGS_MEMORY_PMU | TIDEWAYS_XHPROF_FLAGS_CPU);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public function beforeAction($action)</span><br><span class="line">&#123;</span><br><span class="line">  $this-&gt;startXhprof();</span><br><span class="line">  return parent::beforeAction($action);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在 <code>afterAction</code> 中获取分析数据并存入MongoDB</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line">private function stopXhprof()</span><br><span class="line">&#123;</span><br><span class="line">    $data[&apos;profile&apos;] = tideways_xhprof_disable();</span><br><span class="line">    </span><br><span class="line">    // ignore_user_abort(true) allows your PHP script to continue executing, even if the user has terminated their request.</span><br><span class="line">    // Further Reading: http://blog.preinheimer.com/index.php?/archives/248-When-does-a-user-abort.html</span><br><span class="line">    // flush() asks PHP to send any data remaining in the output buffers. This is normally done when the script completes, but</span><br><span class="line">    // since we&apos;re delaying that a bit by dealing with the xhprof stuff, we&apos;ll do it now to avoid making the user wait.</span><br><span class="line">    ignore_user_abort(true);</span><br><span class="line">    flush();</span><br><span class="line">    </span><br><span class="line">    if (!defined(&apos;XHGUI_ROOT_DIR&apos;)) &#123;</span><br><span class="line">        require &apos;/data/www/html/xhgui/src/bootstrap.php&apos;;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    $uri = array_key_exists(&apos;REQUEST_URI&apos;, $_SERVER)</span><br><span class="line">        ? $_SERVER[&apos;REQUEST_URI&apos;]</span><br><span class="line">        : null;</span><br><span class="line">    if (empty($uri) &amp;&amp; isset($_SERVER[&apos;argv&apos;])) &#123;</span><br><span class="line">        $cmd = basename($_SERVER[&apos;argv&apos;][0]);</span><br><span class="line">        $uri = $cmd . &apos; &apos; . implode(&apos; &apos;, array_slice($_SERVER[&apos;argv&apos;], 1));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    $time = array_key_exists(&apos;REQUEST_TIME&apos;, $_SERVER)</span><br><span class="line">        ? $_SERVER[&apos;REQUEST_TIME&apos;]</span><br><span class="line">        : time();</span><br><span class="line">    $requestTimeFloat = explode(&apos;.&apos;, $_SERVER[&apos;REQUEST_TIME_FLOAT&apos;]);</span><br><span class="line">    if (!isset($requestTimeFloat[1])) &#123;</span><br><span class="line">        $requestTimeFloat[1] = 0;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    $requestTs = new \MongoDate($time);</span><br><span class="line">    $requestTsMicro = new \MongoDate($requestTimeFloat[0], $requestTimeFloat[1]);</span><br><span class="line"></span><br><span class="line">    $data[&apos;meta&apos;] = array(</span><br><span class="line">        &apos;url&apos; =&gt; $uri,</span><br><span class="line">        &apos;SERVER&apos; =&gt; $_SERVER,</span><br><span class="line">        &apos;get&apos; =&gt; $_GET,</span><br><span class="line">        &apos;env&apos; =&gt; $_ENV,</span><br><span class="line">        &apos;simple_url&apos; =&gt; \Xhgui_Util::simpleUrl($uri),</span><br><span class="line">        &apos;request_ts&apos; =&gt; $requestTs,</span><br><span class="line">        &apos;request_ts_micro&apos; =&gt; $requestTsMicro,</span><br><span class="line">        &apos;request_date&apos; =&gt; date(&apos;Y-m-d&apos;, $time),</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    try &#123;</span><br><span class="line">        $config = \Xhgui_Config::all();</span><br><span class="line">        $config += array(&apos;db.options&apos; =&gt; array());</span><br><span class="line">        $saver = \Xhgui_Saver::factory($config);</span><br><span class="line">        $saver-&gt;save($data);</span><br><span class="line">    &#125; catch (\Exception $e) &#123;</span><br><span class="line">        error_log(&apos;xhgui - &apos; . $e-&gt;getMessage());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public function afterAction($action, $result)</span><br><span class="line">&#123;</span><br><span class="line">    $this-&gt;stopXhprof();</span><br><span class="line">    return parent::afterAction($action, $result);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="整理nginx"><a href="#整理nginx" class="headerlink" title="整理nginx"></a>整理nginx</h2><p>我们需要添加一个server，指向<code>xhgui/webroot/</code> 目录，用于展示</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">server &#123;</span><br><span class="line">    listen       80;</span><br><span class="line">    server_name  xx.xxx.com;</span><br><span class="line">    root  /data/www/html/xhgui/webroot;   //指向自身的目录</span><br><span class="line"></span><br><span class="line">    location / &#123;</span><br><span class="line">        index  index.php;</span><br><span class="line">        if (!-e $request_filename) &#123;</span><br><span class="line">            rewrite . /index.php last;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">	# 下面这段可根据自身配置的php解析进行相应的修改</span><br><span class="line">    location ~ \.php$ &#123;</span><br><span class="line">        fastcgi_pass   127.0.0.1:9000;</span><br><span class="line">        fastcgi_index  index.php;</span><br><span class="line">        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;</span><br><span class="line">        include        fastcgi_params;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>到此为止，访问配置的域名就可以看到性能分析平台了</p>
+<h1 id="异常"><a href="#异常" class="headerlink" title="异常"></a>异常</h1><p>有可能你会遇到如下的问题</p>
+<p><img src="http://github-1253518569.cossh.myqcloud.com/mongo-exception.png" alt="mongo异常"></p>
+<p>修改 <code>/path/to/xhgui/src/Xhgui/Profiles.php</code> 的<strong>aggregate</strong> 的传参，约172行</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">137         $results = $this-&gt;_collection-&gt;aggregate(array(</span><br><span class="line">138             array(&apos;$match&apos; =&gt; $match),</span><br><span class="line">139             array(</span><br><span class="line">140                 &apos;$project&apos; =&gt; array(</span><br><span class="line">141                     &apos;date&apos; =&gt; $col,</span><br><span class="line">142                     &apos;profile.main()&apos; =&gt; 1</span><br><span class="line">143                 )</span><br><span class="line">144             ),</span><br><span class="line">145             array(</span><br><span class="line">146                 &apos;$group&apos; =&gt; array(</span><br><span class="line">147                     &apos;_id&apos; =&gt; &apos;$date&apos;,</span><br><span class="line">148                     &apos;row_count&apos; =&gt; array(&apos;$sum&apos; =&gt; 1),</span><br><span class="line">149                     &apos;wall_times&apos; =&gt; array(&apos;$push&apos; =&gt; &apos;$profile.main().wt&apos;),</span><br><span class="line">150                     &apos;cpu_times&apos; =&gt; array(&apos;$push&apos; =&gt; &apos;$profile.main().cpu&apos;),</span><br><span class="line">151                     &apos;mu_times&apos; =&gt; array(&apos;$push&apos; =&gt; &apos;$profile.main().mu&apos;),</span><br><span class="line">152                     &apos;pmu_times&apos; =&gt; array(&apos;$push&apos; =&gt; &apos;$profile.main().pmu&apos;),</span><br><span class="line">153                 )</span><br><span class="line">154             ),</span><br><span class="line">155             array(</span><br><span class="line">156                 &apos;$project&apos; =&gt; array(</span><br><span class="line">157                     &apos;date&apos; =&gt; &apos;$date&apos;,</span><br><span class="line">158                     &apos;row_count&apos; =&gt; &apos;$row_count&apos;,</span><br><span class="line">159                     &apos;raw_index&apos; =&gt; array(</span><br><span class="line">160                         &apos;$multiply&apos; =&gt; array(</span><br><span class="line">161                             &apos;$row_count&apos;,</span><br><span class="line">162                             $percentile / 100</span><br><span class="line">163                         )</span><br><span class="line">164                     ),</span><br><span class="line">165                     &apos;wall_times&apos; =&gt; &apos;$wall_times&apos;,</span><br><span class="line">166                     &apos;cpu_times&apos; =&gt; &apos;$cpu_times&apos;,</span><br><span class="line">167                     &apos;mu_times&apos; =&gt; &apos;$mu_times&apos;,</span><br><span class="line">168                     &apos;pmu_times&apos; =&gt; &apos;$pmu_times&apos;,</span><br><span class="line">169                 )</span><br><span class="line">170             ),</span><br><span class="line">171             array(&apos;$sort&apos; =&gt; array(&apos;_id&apos; =&gt; 1)),</span><br><span class="line">172         )</span><br><span class="line">173			,array(&apos;cursor&apos; =&gt; array(&apos;batchSize&apos; =&gt; 0)));</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/PHP/" rel="tag"># PHP</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/posts/132/" rel="next" title="git merge和git merge --no-ff的区别">
+                <i class="fa fa-chevron-left"></i> git merge和git merge --no-ff的区别
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/posts/28158/" rel="prev" title="免费SSL证书制作-Lets Encrypt">
+                免费SSL证书制作-Lets Encrypt <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">TY·Loafer</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">50</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">19</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">38</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#安装Tideways"><span class="nav-number">1.</span> <span class="nav-text">安装Tideways</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#安装PHP及扩展"><span class="nav-number">1.1.</span> <span class="nav-text">安装PHP及扩展</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装Tideways-1"><span class="nav-number">1.2.</span> <span class="nav-text">安装Tideways</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#安装xhgui"><span class="nav-number">2.</span> <span class="nav-text">安装xhgui</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#安装MongoDB"><span class="nav-number">3.</span> <span class="nav-text">安装MongoDB</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#安装MongoDB-1"><span class="nav-number">3.1.</span> <span class="nav-text">安装MongoDB</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#添加索引"><span class="nav-number">3.2.</span> <span class="nav-text">添加索引</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#整合Tideways和Xhgui到项目"><span class="nav-number">4.</span> <span class="nav-text">整合Tideways和Xhgui到项目</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#整合代码"><span class="nav-number">4.1.</span> <span class="nav-text">整合代码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#整理nginx"><span class="nav-number">4.2.</span> <span class="nav-text">整理nginx</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#异常"><span class="nav-number">5.</span> <span class="nav-text">异常</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TY·Loafer</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://tyloafer.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://tyloafer.github.io/posts/7748/';
+          this.page.identifier = 'posts/7748/';
+          this.page.title = 'PHP性能分析工具xhgui+tideways实践';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://tyloafer.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

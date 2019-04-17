@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="PHP,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="TY·Loafer" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="我们在使用nginx的时候，有-s reload实现配置的重载，别的应用也有kill -USR1 实现配置的重载，但是在php的脚本在执行的时候，就只有简单粗暴的kill 来杀死，再启动。所以，是否可以实现 类似于 nginx的-s一样，给与一个信号量，来进行平滑重启或杀死？">
+<meta name="keywords" content="PHP">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PHP基于共享内存实现single信号量控制脚本启停">
+<meta property="og:url" content="https://tyloafer.github.io/posts/41236/index.html">
+<meta property="og:site_name" content="TY·Loafer">
+<meta property="og:description" content="我们在使用nginx的时候，有-s reload实现配置的重载，别的应用也有kill -USR1 实现配置的重载，但是在php的脚本在执行的时候，就只有简单粗暴的kill 来杀死，再启动。所以，是否可以实现 类似于 nginx的-s一样，给与一个信号量，来进行平滑重启或杀死？">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-04-17T03:23:46.320Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="PHP基于共享内存实现single信号量控制脚本启停">
+<meta name="twitter:description" content="我们在使用nginx的时候，有-s reload实现配置的重载，别的应用也有kill -USR1 实现配置的重载，但是在php的脚本在执行的时候，就只有简单粗暴的kill 来杀死，再启动。所以，是否可以实现 类似于 nginx的-s一样，给与一个信号量，来进行平滑重启或杀死？">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://tyloafer.github.io/posts/41236/">
+
+
+
+
+
+  <title>PHP基于共享内存实现single信号量控制脚本启停 | TY·Loafer</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">TY·Loafer</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/41236/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">PHP基于共享内存实现single信号量控制脚本启停</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-05-18T20:30:00+08:00">
+                2018-05-18
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-04-17T11:23:46+08:00">
+                2019-04-17
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/41236/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/41236/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>我们在使用nginx的时候，有<code>-s reload</code>实现配置的重载，别的应用也有<code>kill -USR1</code> 实现配置的重载，但是在php的脚本在执行的时候，就只有简单粗暴的<code>kill</code> 来杀死，再启动。所以，是否可以实现 类似于 nginx的<code>-s</code>一样，给与一个信号量，来进行平滑重启或杀死？</p>
+<a id="more"></a>
+<h1 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h1><p>我们在写死循环的时候一般是<code>while(true)</code>, 那么只要在<code>while(true)</code>紧接着给他一个变量，然后在根据这个变量的值来判断是否需要结束不久可以实现程序的自动结束了吗？</p>
+<p>这样的话，php程序内自定义变量肯定是不行了，我们可以借助一个文件或redis或mysql等来实现，例如，a脚本在执行开始的时候，在redis里面设置一个key a，然后每次while的时候，读取redis里面a的值，如果改变了，便执行相关的操作</p>
+<p>这当然是可行的，但是在测试的时候，你就会发现，cpu会占用很高，所以这个就被kill了</p>
+<h1 id="共享内存"><a href="#共享内存" class="headerlink" title="共享内存"></a>共享内存</h1><p>既然php的所有变量都是放在内存里面的，那一个php脚本a在执行的时候，设置一个变量$flag, 然后其他脚本可以访问这个变量并修改变量的值，这样的话，资源的消耗就是几乎为0了，这也就引进了一个概念：<strong>共享内存</strong></p>
+<p>共享内存的使用主要是为了能够在同一台机器不同的进程中共享一些数据，比如在多个 php-fpm 进程中共享当前进程的使用情况。这种通信也称为进程间通信（Inter-Process Communication），简称 IPC。</p>
+<p>PHP 内置的 <a href="http://php.net/manual/zh/book.shmop.php" target="_blank" rel="noopener">shmop 扩展</a> (Shared Memory Operations) 提供了一系列共享内存操作的函数。当然这也是基于Linux共享内存实现的，具体的就自行google吧。</p>
+<h2 id="函数列表及简介"><a href="#函数列表及简介" class="headerlink" title="函数列表及简介"></a>函数列表及简介</h2><ol>
+<li>int <strong>ftok</strong> ( string <code>$pathname</code> , string <code>$proj</code> )  把一个执行的文件或项目转换成一个系统上的IPC key，同一个系统上，每个文件对应的IPC key是相同的，所以也就让信号量控制成为了可能</li>
+<li>resource <strong>shmop_open</strong> ( int <code>$key</code> , string <code>$flags</code> , int <code>$mode</code> , int <code>$size</code> ) 创建一个指定大小的内存块</li>
+<li>string <strong>shmop_read</strong> ( resource <code>$shmid</code> , int <code>$start</code> , int <code>$count</code> ) 从一个共享内存块中读取数据 如果填充的数据比共享内存的size小的话，会自动给数据填充空白符，所以记得套trim()</li>
+<li>int <strong>shmop_size</strong> ( resource <code>$shmid</code> ) 获取一个共享内存的大小 ，参数是 <strong>shmop_open</strong>返回的内容</li>
+<li>int <strong>shmop_write</strong> ( resource <code>$shmid</code> , string <code>$data</code> , int <code>$offset</code> ) 向共享内存中写入数据</li>
+<li>bool <strong>shmop_delete</strong> ( resource <code>$shmid</code> ) 删除一个共享内存块</li>
+<li>void <strong>shmop_close</strong> ( resource <code>$shmid</code> ) 关闭一个共享内存块，并不删除</li>
+</ol>
+<h2 id="注意"><a href="#注意" class="headerlink" title="注意"></a>注意</h2><ol>
+<li><p><strong>ftok()</strong> 函数的第一个<code>pathname</code> 可以使一个文件的全路径， 第二个参数，可以随意给，但必须是<strong>长度为1</strong>的字符</p>
+</li>
+<li><p>在使用<strong>shmop_open</strong>的时候，会注意到 第一个参数 int <code>$key</code> 有可能会一脸迷茫，这里其实是 <strong>fotk()</strong>函数的返回值， 我们前面说过 <strong>fotk()</strong> 是将文件转换成 IPC key，也就是这里的key</p>
+</li>
+<li><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&quot;a&quot; for access (sets SHM_RDONLY for shmat) use this flag when you need to open an existing shared memory segment for read only</span><br><span class="line">&quot;c&quot; for create (sets IPC_CREATE) use this flag when you need to create a new shared memory segment or if a segment with the same key exists, try to open it for read and write</span><br><span class="line">&quot;w&quot; for read &amp; write access use this flag when you need to read and write to a shared memory segment, use this flag in most cases.</span><br><span class="line">&quot;n&quot; create a new memory segment (sets IPC_CREATE|IPC_EXCL) use this flag when you want to create a new shared memory segment but if one already exists with the same flag, fail. This is useful for security purposes, using this you can prevent race condition exploits.</span><br></pre></td></tr></table></figure>
+<p>我在这里使用”n”的时候，会报错，使用“c”便不会，各位可自行测试</p>
+</li>
+</ol>
+<h1 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h1><p>脚本a.php </p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="comment">// 生成IPC key</span></span><br><span class="line">$shm_key = ftok(<span class="keyword">__FILE__</span>, <span class="string">'t'</span>);</span><br><span class="line"><span class="comment">// 信号量的话 0-9也足够了，所以这里分配1byte的大小即可，同时这样也不会产生空白符，省去了使用trim()</span></span><br><span class="line">$shm_id = shmop_open($shm_key, <span class="string">'c'</span>, <span class="number">0644</span>, <span class="number">1</span>);</span><br><span class="line">shmop_write($shm_id, <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line"><span class="keyword">while</span> (shmop_read($shm_id, <span class="number">0</span>, shmop_size($shm_id)) == <span class="number">1</span>) &#123;</span><br><span class="line">  <span class="comment">// to do</span></span><br><span class="line">&#125;</span><br><span class="line">shmop_close($shm_id);</span><br><span class="line">shmop_delete($shm_id);</span><br></pre></td></tr></table></figure>
+<p>控制启停的脚本 single.php</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">php single.php a.php /data/</span><br></pre></td></tr></table></figure>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="comment">// 获取需要控制的脚本</span></span><br><span class="line">$args = $_SERVER[<span class="string">'argv'</span>];</span><br><span class="line">array_shift($args);</span><br><span class="line">$file = $args[<span class="number">1</span>] . <span class="string">'/'</span> . $args[<span class="number">0</span>];</span><br><span class="line">$shm_key = ftok(<span class="keyword">__FILE__</span>, <span class="string">'t'</span>);</span><br><span class="line"><span class="comment">// 信号量的话 0-9也足够了，所以这里分配1byte的大小即可，同时这样也不会产生空白符，省去了使用trim()</span></span><br><span class="line">$shm_id = shmop_open($shm_key, <span class="string">'c'</span>, <span class="number">0644</span>, <span class="number">1</span>);</span><br><span class="line">shmop_write($shm_id, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line"><span class="keyword">echo</span> <span class="string">"[停止] "</span>;</span><br><span class="line"><span class="keyword">while</span> (@shmop_read($shm_id, <span class="number">0</span>, shmop_size($shm_id)) === <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="keyword">echo</span> <span class="string">'.'</span>;</span><br><span class="line">&#125;</span><br><span class="line">shmop_close($shm_id);</span><br><span class="line">shmop_delete($shm_id);</span><br><span class="line"><span class="keyword">echo</span> <span class="string">"成功"</span>;</span><br></pre></td></tr></table></figure>
+<h1 id="进阶-内存锁"><a href="#进阶-内存锁" class="headerlink" title="进阶-内存锁"></a>进阶-内存锁</h1><h2 id="函数及列表"><a href="#函数及列表" class="headerlink" title="函数及列表"></a>函数及列表</h2><p><strong>ftok</strong> 是必须要用到的</p>
+<ol>
+<li>resource <strong>sem_get</strong> ( int <code>$key</code> [, int <code>$max_acquire</code> = 1 [, int <code>$perm</code> = 0666 [, int <code>$auto_release</code> = 1 ]]] ) 创建一个信号资源</li>
+<li>bool <strong>sem_acquire</strong> ( resource <code>$sem_identifier</code> [, bool <code>$nowait</code> = FALSE ] )  根据信号资源，获得一个信号使用权限</li>
+<li>bool <strong>sem_release</strong> ( resource <code>$sem_identifier</code> ) 释放一个获取的信号使用权限</li>
+</ol>
+<p>上面三个是我使用到的，更多的可以参考PHP手册上的<a href="http://php.net/manual/zh/book.sem.php" target="_blank" rel="noopener">Semaphore</a>，会有更多相关的介绍，但是这里结合上面的共享内存的函数，就完全够用了。</p>
+<h2 id="注意-1"><a href="#注意-1" class="headerlink" title="注意"></a>注意</h2><ol>
+<li><strong>sem_get</strong> 的key也是 <strong>ftok</strong>函数产生的，所以可以与共享内存的共用一个key， 第二个参数 <code>$max_acquire</code> 设置了，这个信号资源，最多一次可以被多少个进程访问，当设置为1的时候，也就实现了锁的机制</li>
+<li><strong>sem_acquire</strong> 是获取一个信号资源的使用权，当这个信号资源被占用，且达到最大的请求数的时候，第二个参数<code>$nowait</code> 决定了接下来的行为，如果为设置true的话，则函数直接返回 false，而如果<code>$nowait</code>设置为false的时候，则会阻塞进程，知道获取资源的使用权限</li>
+</ol>
+<h1 id="进阶-为脚本加上锁"><a href="#进阶-为脚本加上锁" class="headerlink" title="进阶-为脚本加上锁"></a>进阶-为脚本加上锁</h1><p>我们可以根据上面的函数，为脚本加上锁，实现一个脚本的单一执行（当然linux下的<strong>flock</strong>和php的<strong>flock()</strong>也可以实现）</p>
+<p>脚本a.php </p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="comment">// 生成IPC key</span></span><br><span class="line">$shm_key = ftok(<span class="keyword">__FILE__</span>, <span class="string">'t'</span>);</span><br><span class="line"><span class="comment">// 信号量的话 0-9也足够了，所以这里分配1byte的大小即可，同时这样也不会产生空白符，省去了使用trim()</span></span><br><span class="line">$shm_id = shmop_open($shm_key, <span class="string">'c'</span>, <span class="number">0644</span>, <span class="number">1</span>);</span><br><span class="line">shmop_write($shm_id, <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line">$sem_id = sem_get($shm_key);</span><br><span class="line"><span class="keyword">if</span> (!sem_acquire($sem_id, <span class="keyword">true</span>)) &#123;</span><br><span class="line">    <span class="comment">// 有另一个脚本正在执行，结束当前执行</span></span><br><span class="line">    <span class="keyword">echo</span> <span class="string">"another is running..."</span>;</span><br><span class="line">  	<span class="keyword">exit</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">while</span> (shmop_read($shm_id, <span class="number">0</span>, shmop_size($shm_id)) == <span class="number">1</span>) &#123;</span><br><span class="line">  <span class="comment">// to do</span></span><br><span class="line">&#125;</span><br><span class="line">sem_release($sem_id);</span><br><span class="line">shmop_close($shm_id);</span><br><span class="line">shmop_delete($shm_id);</span><br></pre></td></tr></table></figure>
+<p>控制启停的脚本 single.php</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">php single.php a.php /data/</span><br></pre></td></tr></table></figure>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="comment">// 获取需要控制的脚本</span></span><br><span class="line">$args = $_SERVER[<span class="string">'argv'</span>];</span><br><span class="line">array_shift($args);</span><br><span class="line">$file = $args[<span class="number">1</span>] . <span class="string">'/'</span> . $args[<span class="number">0</span>];</span><br><span class="line">$shm_key = ftok(<span class="keyword">__FILE__</span>, <span class="string">'t'</span>);</span><br><span class="line"><span class="comment">// 信号量的话 0-9也足够了，所以这里分配1byte的大小即可，同时这样也不会产生空白符，省去了使用trim()</span></span><br><span class="line">$shm_id = shmop_open($shm_key, <span class="string">'c'</span>, <span class="number">0644</span>, <span class="number">1</span>);</span><br><span class="line">shmop_write($shm_id, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line"><span class="keyword">echo</span> <span class="string">"[停止] "</span>;</span><br><span class="line">$sem_id = sem_get($shm_key);</span><br><span class="line"><span class="comment">// 脚本在执行结束的时候，会释放信号资源，所以这里可以通过能否获得信号资源来判断脚本是否结束</span></span><br><span class="line"><span class="keyword">if</span> (!sem_acquire($sem_id, <span class="keyword">true</span>)) &#123;</span><br><span class="line">    <span class="keyword">echo</span> <span class="string">'.'</span>;</span><br><span class="line">&#125;</span><br><span class="line">sem_release($sem_id);</span><br><span class="line">shmop_close($shm_id);</span><br><span class="line">shmop_delete($shm_id);</span><br><span class="line"><span class="keyword">echo</span> <span class="string">"成功"</span>;</span><br></pre></td></tr></table></figure>
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/PHP/" rel="tag"># PHP</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/posts/13311/" rel="next" title="玩玩Swoole（一）：Swoole整合Yii">
+                <i class="fa fa-chevron-left"></i> 玩玩Swoole（一）：Swoole整合Yii
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/posts/51207/" rel="prev" title="Redis哨兵">
+                Redis哨兵 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">TY·Loafer</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">50</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">19</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">38</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#思路"><span class="nav-number">1.</span> <span class="nav-text">思路</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#共享内存"><span class="nav-number">2.</span> <span class="nav-text">共享内存</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#函数列表及简介"><span class="nav-number">2.1.</span> <span class="nav-text">函数列表及简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#注意"><span class="nav-number">2.2.</span> <span class="nav-text">注意</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#示例"><span class="nav-number">3.</span> <span class="nav-text">示例</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#进阶-内存锁"><span class="nav-number">4.</span> <span class="nav-text">进阶-内存锁</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#函数及列表"><span class="nav-number">4.1.</span> <span class="nav-text">函数及列表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#注意-1"><span class="nav-number">4.2.</span> <span class="nav-text">注意</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#进阶-为脚本加上锁"><span class="nav-number">5.</span> <span class="nav-text">进阶-为脚本加上锁</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TY·Loafer</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://tyloafer.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://tyloafer.github.io/posts/41236/';
+          this.page.identifier = 'posts/41236/';
+          this.page.title = 'PHP基于共享内存实现single信号量控制脚本启停';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://tyloafer.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="PHP,Swoole,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="TY·Loafer" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="对于共享资源，有一个很著名的设计模式：资源池（Resource Pool）。该模式正是为了解决资源的频繁分配﹑释放所造成的问题。数据库连接池的基本思想就是为数据库连接建立一个“池”子，在使用的时候，从“池子”中获取资源，用完后将连接放回“池子”，减少了数据库连接建立与释放造成的损耗。">
+<meta name="keywords" content="PHP,Swoole">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PHP实现基于Swoole的MySQL连接池">
+<meta property="og:url" content="https://tyloafer.github.io/posts/55187/index.html">
+<meta property="og:site_name" content="TY·Loafer">
+<meta property="og:description" content="对于共享资源，有一个很著名的设计模式：资源池（Resource Pool）。该模式正是为了解决资源的频繁分配﹑释放所造成的问题。数据库连接池的基本思想就是为数据库连接建立一个“池”子，在使用的时候，从“池子”中获取资源，用完后将连接放回“池子”，减少了数据库连接建立与释放造成的损耗。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-04-17T03:23:46.335Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="PHP实现基于Swoole的MySQL连接池">
+<meta name="twitter:description" content="对于共享资源，有一个很著名的设计模式：资源池（Resource Pool）。该模式正是为了解决资源的频繁分配﹑释放所造成的问题。数据库连接池的基本思想就是为数据库连接建立一个“池”子，在使用的时候，从“池子”中获取资源，用完后将连接放回“池子”，减少了数据库连接建立与释放造成的损耗。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://tyloafer.github.io/posts/55187/">
+
+
+
+
+
+  <title>PHP实现基于Swoole的MySQL连接池 | TY·Loafer</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">TY·Loafer</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/55187/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">PHP实现基于Swoole的MySQL连接池</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-11-01T19:04:00+08:00">
+                2018-11-01
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-04-17T11:23:46+08:00">
+                2019-04-17
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/55187/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/55187/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>对于共享资源，有一个很著名的设计模式：资源池（Resource Pool）。该模式正是为了解决资源的频繁分配﹑释放所造成的问题。数据库连接池的基本思想就是为数据库连接建立一个“池”子，在使用的时候，从“池子”中获取资源，用完后将连接放回“池子”，减少了数据库连接建立与释放造成的损耗。</p>
+<a id="more"></a>
+<p>而对于PHP而言，每一个请求过来都是由php-fpm调起来一个cgi来处理，处理完后就会被释放，所以并没办法在代码中实现连接池的，但是由运行方式，我们可以自然而然的推想，既然php-fpm是常驻内存的，那我们将数据库连接交给php-fpm托管，也就实现了理论上的数据库连接池，而这种实现方式也就是MySQL的<strong>pconnect</strong>的实现方式，而且经测试，效果并没有显著的提升。那么，接下来便可以考虑基于<strong>Swoole</strong>的常驻内存的特性来帮忙实现了</p>
+<h1 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h1><ol>
+<li>首先基于Swoole的channel实现一个<strong>内存队列</strong> <strong>quene</strong>，（也可以通过php的共享内存实现，这里不讨论这种方式），用于存放MySQL连接的线程id，<strong>thread_id</strong></li>
+<li>建立一定数量的MySQL连接存放在数组中，然后将 <strong>thread_id</strong>（mysqli::$thread_id）推进<strong>内存队列</strong> <strong>quene</strong>,</li>
+<li>每个请求过来的时候，从<strong>quene</strong>中 pop 出一个 <strong>thread_id</strong>， 根据<strong>thread_id</strong>找到对应数组中对应的数据库连接</li>
+<li>请求结束后，将<strong>thread_id</strong>再push进<strong>quene</strong></li>
+</ol>
+<h1 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h1><h2 id="数据库连接管理者"><a href="#数据库连接管理者" class="headerlink" title="数据库连接管理者"></a>数据库连接管理者</h2><blockquote>
+<p>这个类是用来管理连接的，增加和删除以及获取链接使用</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">class MysqlConnections &#123;</span><br><span class="line">    private $config = [</span><br><span class="line">        &apos;host&apos; =&gt; &apos;127.0.0.1&apos;,</span><br><span class="line">        &apos;username&apos; =&gt; &apos;root&apos;,</span><br><span class="line">        &apos;password&apos; =&gt; &apos;ifind@13579&apos;,</span><br><span class="line">        &apos;dbname&apos; =&gt; &apos;test&apos;,</span><br><span class="line">        &apos;charset&apos; =&gt; &apos;utf8&apos;,</span><br><span class="line">    ];</span><br><span class="line">    private $connectionsNum = 0;</span><br><span class="line"></span><br><span class="line">    private $connections = [];</span><br><span class="line">    function __construct($config = []) &#123;</span><br><span class="line">        $this-&gt;config = array_merge($this-&gt;config, $config);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * 增加一个mysql连接到连接池</span><br><span class="line">     */</span><br><span class="line">    public function addConnection()</span><br><span class="line">    &#123;</span><br><span class="line">        $mysql = new Mysqli($this-&gt;config[&apos;host&apos;], $this-&gt;config[&apos;username&apos;], $this-&gt;config[&apos;password&apos;], $this-&gt;config[&apos;dbname&apos;]);</span><br><span class="line">        $this-&gt;connections[$mysql-&gt;thread_id] = $mysql;</span><br><span class="line">        echo &apos;add &apos; . $mysql-&gt;thread_id . &apos; into pool &apos; . PHP_EOL;</span><br><span class="line">        $this-&gt;connectionsNum ++;</span><br><span class="line">        return $mysql-&gt;thread_id;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function getConnection($id = 0)</span><br><span class="line">    &#123;</span><br><span class="line">        if ($id == 0) &#123;</span><br><span class="line">            $id = $this-&gt;addConnection();</span><br><span class="line">        &#125;</span><br><span class="line">        return $this-&gt;connections[$id];</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function releaseConnection($id)</span><br><span class="line">    &#123;</span><br><span class="line">        $this-&gt;connectionsNum--;</span><br><span class="line">        unset($this-&gt;connections[$id]);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function __get($name)</span><br><span class="line">    &#123;</span><br><span class="line">        if ($name == &apos;connectionsNum&apos;) &#123;</span><br><span class="line">            return $this-&gt;connectionsNum;</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            return null;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="内存队列"><a href="#内存队列" class="headerlink" title="内存队列"></a>内存队列</h2><blockquote>
+<p>这里是以数据库连接属性的thread_id 组成的内存队列</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">class Quene &#123;</span><br><span class="line">    private $length; // 队长</span><br><span class="line">    private $size;</span><br><span class="line"></span><br><span class="line">    private $chan;</span><br><span class="line">    /**</span><br><span class="line">     * 构造函数</span><br><span class="line">     */</span><br><span class="line">    public function __construct($size = 64 * 1024) </span><br><span class="line">    &#123;</span><br><span class="line">        $this-&gt;chan = new \Swoole\Channel($size);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * 入队操作</span><br><span class="line">     * @param  [type] $id [description]</span><br><span class="line">     * @return [type]     [description]</span><br><span class="line">     */</span><br><span class="line">    public function push($id)</span><br><span class="line">    &#123;</span><br><span class="line">        $this-&gt;length ++;</span><br><span class="line">        $this-&gt;chan-&gt;push($id);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    /**</span><br><span class="line">     * 出队操作</span><br><span class="line">     * @return [type] [description]</span><br><span class="line">     */</span><br><span class="line">    public function pop()</span><br><span class="line">    &#123;</span><br><span class="line">        $this-&gt;length --;</span><br><span class="line">        $id = $this-&gt;chanpop();</span><br><span class="line">        return $id;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function __get($name)</span><br><span class="line">    &#123;</span><br><span class="line">        if ($name == &apos;length&apos;) &#123;</span><br><span class="line">            return $this-&gt;length;</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            return null;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="数据库连接池"><a href="#数据库连接池" class="headerlink" title="数据库连接池"></a>数据库连接池</h2><blockquote>
+<p>结合上面的连接管理者和队列，实现对连接的分发和归还</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line">class DbPool &#123;</span><br><span class="line">    private $max; // 最大的mysql连接数</span><br><span class="line">    private $min = 0; // 建立最小的mysql连接数</span><br><span class="line">    private $connections;</span><br><span class="line">    private $quene;</span><br><span class="line"></span><br><span class="line">    public function __construct($max, $min = 0)</span><br><span class="line">    &#123;</span><br><span class="line">        if (!empty($max)) &#123;</span><br><span class="line">            $this-&gt;max = $max;</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            throw new Exception(&apos;please set max connnections&apos;, &apos;-1&apos;);</span><br><span class="line">        &#125;</span><br><span class="line">        $this-&gt;min = $min;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function setConnection(MysqlConnections $connections)</span><br><span class="line">    &#123;</span><br><span class="line">        $this-&gt;connections = $connections;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function setQuene(Quene $quene)</span><br><span class="line">    &#123;</span><br><span class="line">        $this-&gt;quene = $quene;</span><br><span class="line">        $this-&gt;initQuene();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function initQuene($min = 0, $max = 0)</span><br><span class="line">    &#123;</span><br><span class="line">        for ($i = 0; $i &lt; $this-&gt;min; $i++) &#123;</span><br><span class="line">            $this-&gt;quene-&gt;push($this-&gt;connections-&gt;addConnection());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function obtain()</span><br><span class="line">    &#123;</span><br><span class="line">        if ($this-&gt;connections-&gt;connectionsNum &gt;= $this-&gt;max) &#123;</span><br><span class="line">            // 超出链接最大限制，等待mysql链接释放</span><br><span class="line">            $id = !$this-&gt;quene-&gt;pop();</span><br><span class="line">            while (!$id) &#123;</span><br><span class="line">                usleep(200000);</span><br><span class="line">                $id = $this-&gt;quene-&gt;pop();</span><br><span class="line">            &#125;</span><br><span class="line">            return $this-&gt;connections-&gt;getConnection($id);</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            $id = $this-&gt;quene-&gt;pop();</span><br><span class="line">            return $this-&gt;connections-&gt;getConnection($id);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function restitute(Mysqli $db)</span><br><span class="line">    &#123;</span><br><span class="line">        echo &apos;restitute thread_id : &apos; . $db-&gt;thread_id . PHP_EOL;</span><br><span class="line">        $this-&gt;quene-&gt;push($db-&gt;thread_id);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="Swoole-Http-Server"><a href="#Swoole-Http-Server" class="headerlink" title="Swoole Http Server"></a>Swoole Http Server</h2><blockquote>
+<p>基于swoole开启一个http server，获取相应的数据库连接，并相应</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">class SwooleServer</span><br><span class="line">&#123;</span><br><span class="line">    private $config = [</span><br><span class="line">        &apos;Connections&apos; =&gt; [</span><br><span class="line">            &apos;min&apos; =&gt; 5,</span><br><span class="line">            &apos;max&apos; =&gt; 10,</span><br><span class="line">        ],</span><br><span class="line">        &apos;Db&apos; =&gt; [</span><br><span class="line">            &apos;host&apos; =&gt; &apos;127.0.0.1&apos;,</span><br><span class="line">            &apos;username&apos; =&gt; &apos;test&apos;,</span><br><span class="line">            &apos;password&apos; =&gt; &apos;123456&apos;,</span><br><span class="line">            &apos;dbname&apos; =&gt; &apos;test&apos;,</span><br><span class="line">            &apos;charset&apos; =&gt; &apos;utf8&apos;,</span><br><span class="line">        ],</span><br><span class="line">        &apos;Swoole&apos; =&gt; [</span><br><span class="line">            &apos;enable_static_handler&apos; =&gt; true,</span><br><span class="line">            &apos;document_root&apos; =&gt; &quot;/home/lixy/basic/web/&quot;,</span><br><span class="line">            &apos;worker_num&apos; =&gt; 5,</span><br><span class="line">            &apos;task_worker_num&apos; =&gt; 5,</span><br><span class="line">            &apos;log_level&apos; =&gt; 3,</span><br><span class="line">        ],</span><br><span class="line">        &apos;Channel&apos; =&gt; [</span><br><span class="line">            &apos;size&apos; =&gt; 256 * 1024,</span><br><span class="line">        ],</span><br><span class="line">    ];</span><br><span class="line">    private $db_pool;   // mysql链接内存队列</span><br><span class="line">    public function __construct()</span><br><span class="line">    &#123;</span><br><span class="line">        $this-&gt;swoole = new \Swoole\Http\Server(&apos;0.0.0.0&apos;, 9502);</span><br><span class="line">        $this-&gt;swoole-&gt;set($this-&gt;config[&apos;Swoole&apos;]);</span><br><span class="line">        $this-&gt;swoole-&gt;on(&apos;task&apos;, [$this, &apos;task&apos;]);</span><br><span class="line">        $this-&gt;swoole-&gt;on(&apos;finish&apos;, [$this, &apos;finish&apos;]);</span><br><span class="line">        $this-&gt;swoole-&gt;on(&apos;request&apos;, [$this, &apos;request&apos;]);</span><br><span class="line">        $this-&gt;getDbPool();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function getDbPool()</span><br><span class="line">    &#123;</span><br><span class="line">        $connections = new MysqlConnections($this-&gt;config[&apos;Db&apos;]);</span><br><span class="line">        $quene = new Quene();</span><br><span class="line">        $this-&gt;db_pool = new DbPool($this-&gt;config[&apos;Connections&apos;][&apos;max&apos;], $this-&gt;config[&apos;Connections&apos;][&apos;min&apos;]);</span><br><span class="line">        $this-&gt;db_pool-&gt;setConnection($connections);</span><br><span class="line">        $this-&gt;db_pool-&gt;setQuene($quene);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function __call($name, $args)</span><br><span class="line">    &#123;</span><br><span class="line">        return call_user_func_array([$this-&gt;swoole, $name], $args);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * onrequest事件</span><br><span class="line">     * @param  [type] $request  请求对象</span><br><span class="line">     * @param  [type] $response 相应对象</span><br><span class="line">     * @return [type]</span><br><span class="line">     */</span><br><span class="line">    public function request($request, $response)</span><br><span class="line">    &#123;</span><br><span class="line">        $db = $this-&gt;db_pool-&gt;obtain();</span><br><span class="line">        echo &apos;get thread id : &apos; . $db-&gt;thread_id . PHP_EOL;</span><br><span class="line">        $sql = &apos;select * from test&apos;;</span><br><span class="line">        $result = $db-&gt;query($sql);</span><br><span class="line">        $this-&gt;db_pool-&gt;restitute($db);</span><br><span class="line">        $response-&gt;end(&apos;hello, response from swoole server&apos;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function task($serv, $task_id, $from_id, $data)</span><br><span class="line">    &#123;</span><br><span class="line">        echo $task_id;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public function finish($serv, $task_id, $data)</span><br><span class="line">    &#123;</span><br><span class="line">        echo $task_id;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">$swoole_index = new SwooleServer();</span><br><span class="line">$swoole_index-&gt;start();</span><br></pre></td></tr></table></figure>
+<h1 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h1><blockquote>
+<p>ab -n 10 -c 5 <a href="http://127.0.0.1:9502/" target="_blank" rel="noopener">http://127.0.0.1:9502/</a></p>
+</blockquote>
+<p>结果</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">add 6879 into pool </span><br><span class="line">add 6880 into pool </span><br><span class="line">add 6881 into pool </span><br><span class="line">add 6882 into pool </span><br><span class="line">add 6883 into pool </span><br><span class="line"></span><br><span class="line">get thread id : 6879</span><br><span class="line">restitute thread_id : 6879</span><br><span class="line">get thread id : 6880</span><br><span class="line">get thread id : 6881</span><br><span class="line">restitute thread_id : 6880</span><br><span class="line">get thread id : 6882</span><br><span class="line">restitute thread_id : 6881</span><br><span class="line">restitute thread_id : 6882</span><br><span class="line">get thread id : 6883</span><br><span class="line">get thread id : 6879</span><br><span class="line">restitute thread_id : 6879</span><br><span class="line">get thread id : 6881</span><br><span class="line">get thread id : 6880</span><br><span class="line">restitute thread_id : 6881</span><br><span class="line">restitute thread_id : 6880</span><br><span class="line">restitute thread_id : 6883</span><br><span class="line">get thread id : 6882</span><br><span class="line">get thread id : 6879</span><br><span class="line">restitute thread_id : 6882</span><br><span class="line">restitute thread_id : 6879</span><br><span class="line">get thread id : 6881</span><br><span class="line">restitute thread_id : 6881</span><br></pre></td></tr></table></figure>
+<p>完美符合预期</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/PHP/" rel="tag"># PHP</a>
+          
+            <a href="/tags/Swoole/" rel="tag"># Swoole</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/posts/51443/" rel="next" title="MyISAM与InnoDB性能测试对比">
+                <i class="fa fa-chevron-left"></i> MyISAM与InnoDB性能测试对比
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/posts/47934/" rel="prev" title="深入PHP系列-变量分离与引用">
+                深入PHP系列-变量分离与引用 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">TY·Loafer</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">50</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">19</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">38</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#思路"><span class="nav-number">1.</span> <span class="nav-text">思路</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#代码实现"><span class="nav-number">2.</span> <span class="nav-text">代码实现</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#数据库连接管理者"><span class="nav-number">2.1.</span> <span class="nav-text">数据库连接管理者</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#内存队列"><span class="nav-number">2.2.</span> <span class="nav-text">内存队列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据库连接池"><span class="nav-number">2.3.</span> <span class="nav-text">数据库连接池</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Swoole-Http-Server"><span class="nav-number">2.4.</span> <span class="nav-text">Swoole Http Server</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#测试"><span class="nav-number">3.</span> <span class="nav-text">测试</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TY·Loafer</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://tyloafer.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://tyloafer.github.io/posts/55187/';
+          this.page.identifier = 'posts/55187/';
+          this.page.title = 'PHP实现基于Swoole的MySQL连接池';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://tyloafer.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

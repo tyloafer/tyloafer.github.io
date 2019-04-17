@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="PHP,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="TY·Loafer" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="进程: 进程拥有自己独立的堆和栈，既不共享堆，亦不共享栈，进程由操作系统调度。 线程: 线程拥有自己独立的栈和共享的堆，共享堆，不共享栈，线程亦由操作系统调度(标准线程是的)。 根据前面三篇文章《浅析堆栈和内存溢出》 《深入PHP系列之PHP数组底层的实现》《深入PHP系列-变量分离与引用》可以得知，PHP的变量是由zval结构体构成的，数组则是hash表和链表构成的，这些，都是程序员进行分配销毁">
+<meta name="keywords" content="PHP">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深入理解PHP系列之线程安全">
+<meta property="og:url" content="https://tyloafer.github.io/posts/56229/index.html">
+<meta property="og:site_name" content="TY·Loafer">
+<meta property="og:description" content="进程: 进程拥有自己独立的堆和栈，既不共享堆，亦不共享栈，进程由操作系统调度。 线程: 线程拥有自己独立的栈和共享的堆，共享堆，不共享栈，线程亦由操作系统调度(标准线程是的)。 根据前面三篇文章《浅析堆栈和内存溢出》 《深入PHP系列之PHP数组底层的实现》《深入PHP系列-变量分离与引用》可以得知，PHP的变量是由zval结构体构成的，数组则是hash表和链表构成的，这些，都是程序员进行分配销毁">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://github-1253518569.cos.ap-shanghai.myqcloud.com/thread_1.png">
+<meta property="og:image" content="https://github-1253518569.cos.ap-shanghai.myqcloud.com/thread_safe.png">
+<meta property="og:updated_time" content="2019-04-17T03:23:46.318Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="深入理解PHP系列之线程安全">
+<meta name="twitter:description" content="进程: 进程拥有自己独立的堆和栈，既不共享堆，亦不共享栈，进程由操作系统调度。 线程: 线程拥有自己独立的栈和共享的堆，共享堆，不共享栈，线程亦由操作系统调度(标准线程是的)。 根据前面三篇文章《浅析堆栈和内存溢出》 《深入PHP系列之PHP数组底层的实现》《深入PHP系列-变量分离与引用》可以得知，PHP的变量是由zval结构体构成的，数组则是hash表和链表构成的，这些，都是程序员进行分配销毁">
+<meta name="twitter:image" content="https://github-1253518569.cos.ap-shanghai.myqcloud.com/thread_1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://tyloafer.github.io/posts/56229/">
+
+
+
+
+
+  <title>深入理解PHP系列之线程安全 | TY·Loafer</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">TY·Loafer</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/56229/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">深入理解PHP系列之线程安全</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-01-04T20:04:00+08:00">
+                2019-01-04
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-04-17T11:23:46+08:00">
+                2019-04-17
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/56229/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/56229/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>进程: 进程拥有自己独立的堆和栈，既不共享堆，亦不共享栈，进程由操作系统调度。</p>
+<p>线程: 线程拥有自己独立的栈和共享的堆，共享堆，不共享栈，线程亦由操作系统调度(标准线程是的)。</p>
+<p>根据前面三篇文章《<a href="https://tyloafer.github.io/posts/30726/">浅析堆栈和内存溢出</a>》 《<a href="https://tyloafer.github.io/posts/17570/">深入PHP系列之PHP数组底层的实现</a>》《<a href="https://tyloafer.github.io/posts/47934/">深入PHP系列-变量分离与引用</a>》可以得知，PHP的变量是由zval结构体构成的，数组则是hash表和链表构成的，这些，都是程序员进行分配销毁的内存，也即堆内存。由此可得，在不同的线程中，PHP其实是共享变量的，如果线程1修改了变量a， 则线程2使用变量a的时候，就是线程1修改后的结果，所谓线程安全也就是，如何保障，各个线程之间可以安全的使用公共的资源，不受影响且不影响其他线程。因此，PHP实现了一个线程安全资源管理器（Thread Safe Resource Manager, TSRM），用于解决这个问题，实现线程之间安全的操作公共资源。</p>
+<a id="more"></a>
+<h1 id="核心思想"><a href="#核心思想" class="headerlink" title="核心思想"></a>核心思想</h1><p><img src="https://github-1253518569.cos.ap-shanghai.myqcloud.com/thread_1.png" alt="thread_1"></p>
+<p>如图，如果三个线程的内存地址不同，那么在 Thread1 里面操作的是Thread1对应的内存地址，就不会影响 Thread2 和 Thread3 对应的内存地址的值。</p>
+<p>TSRM的核心思想就是为不同的线程分配独立的内存空间，如果一个资源会被多线程使用，那么首先需要预先向TSRM注册资源，然后TSRM为这个资源分配一个唯一的编号，并把这种资源的大小、初始化函数等保存到一个<code>tsrm_resource_type</code>结构中，各线程只能通过TSRM分配的那个编号访问这个资源；然后当线程拿着这个编号获取资源时TSRM如果发现是第一次请求，则会根据注册时的资源大小分配一块内存，然后调用初始化函数进行初始化，并把这块资源保存下来供这个线程后续使用。</p>
+<h1 id="基本实现"><a href="#基本实现" class="headerlink" title="基本实现"></a>基本实现</h1><p><img src="https://github-1253518569.cos.ap-shanghai.myqcloud.com/thread_safe.png" alt="线程安全结构"></p>
+<p>TSRM的整体结构主要如上图所示，现从左向右开始梳理</p>
+<h2 id="tsrm-tls-table"><a href="#tsrm-tls-table" class="headerlink" title="tsrm_tls_table"></a>tsrm_tls_table</h2><p>左侧第一个结构是 <code>tsrm_tls_table</code>, tsrm_tls_table 是一个数组，数组每个索引对应的值是一个地址，也就是为线程申请内存地址。那么如何确定线程在 tsrm_tls_table  的哪个索引下面呢，在PHP的数组的实现中，通过hash散列取模来确定索引，这里也是一样，只是简化了，直接通过线程id % tsrm_tls_table_size 来确定索引。</p>
+<p>我们以上图为例， tsrm_tls_table_size 为 2， 如果新的一个线程， 线程id（后面用 thread_id来替代）， 3 % 2 = 1， 所以 我们在 tsrm_tls_table[1] 下面去寻找这个线程内存地址。进而，这里就会引发一个问题， 5 % 2 = 1，那是不是就冲突了?</p>
+<h2 id="tsrm-tls-entry"><a href="#tsrm-tls-entry" class="headerlink" title="tsrm_tls_entry"></a>tsrm_tls_entry</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">struct _tsrm_tls_entry &#123;</span><br><span class="line">    void **storage; //资源数组</span><br><span class="line">    int count; //拥有的资源数:storage数组大小</span><br><span class="line">    THREAD_T thread_id; //所属线程id</span><br><span class="line">    tsrm_tls_entry *next;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>按照上面的情况来考虑，肯定会存在冲突的情况，除非这个数组特别大，但是那样内存耗费就得不偿失了。</p>
+<p>所以，<code>tsrm_tls_entry</code> 的结构体 有一个这样的 属性 <code>tsrm_tls_entry *next;</code>，这样就可以把各个冲突的 <code>tsrm_tls_entry</code> 串成链表来解决冲突了，这也是hash冲突时，常用的解决方法。</p>
+<h3 id="tsrm-resource-type"><a href="#tsrm-resource-type" class="headerlink" title="tsrm_resource_type"></a>tsrm_resource_type</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">typedef struct &#123;</span><br><span class="line">    size_t size; //资源的大小</span><br><span class="line">    ts_allocate_ctor ctor; //初始化函数</span><br><span class="line">    ts_allocate_dtor dtor;</span><br><span class="line">    int done;</span><br><span class="line">&#125; tsrm_resource_type;</span><br></pre></td></tr></table></figure>
+<p><code>tsrm_resource_type</code> 这个结构体好像在上图中并没有体现出来具体是干什么的，接下来，先看一下，TSRM的初始化过程，应该就能知道这个结构体的作用了</p>
+<p><strong>初始化</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">TSRM_API int tsrm_startup(int expected_threads, int expected_resources, int debug_level, char *debug_filename)</span><br><span class="line">&#123;</span><br><span class="line">    pthread_key_create( &amp;tls_key, 0 );</span><br><span class="line"></span><br><span class="line">    //分配tsrm_tls_table</span><br><span class="line">    tsrm_tls_table_size = expected_threads;</span><br><span class="line">    tsrm_tls_table = (tsrm_tls_entry **) calloc(tsrm_tls_table_size, sizeof(tsrm_tls_entry *));</span><br><span class="line">    ...</span><br><span class="line">    //初始化资源的递增id，注册资源时就是用的这个值</span><br><span class="line">    id_count=0;</span><br><span class="line"></span><br><span class="line">    //分配资源类型数组：resource_types_table</span><br><span class="line">    resource_types_table_size = expected_resources;</span><br><span class="line">    resource_types_table = (tsrm_resource_type *) calloc(resource_types_table_size, sizeof(tsrm_resource_type));</span><br><span class="line">    ...</span><br><span class="line">    //创建锁</span><br><span class="line">    tsmm_mutex = tsrm_mutex_alloc();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>注册资源</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">#ifdef ZTS</span><br><span class="line">ZEND_API int executor_globals_id;</span><br><span class="line">#endif</span><br><span class="line"></span><br><span class="line">int zend_startup(zend_utility_functions *utility_functions, char **extensions)</span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line">#ifdef ZTS</span><br><span class="line">    ts_allocate_id(&amp;executor_globals_id, sizeof(zend_executor_globals), (ts_allocate_ctor) executor_globals_ctor, (ts_allocate_dtor) executor_globals_dtor);</span><br><span class="line">    </span><br><span class="line">    executor_globals = ts_resource(executor_globals_id);</span><br><span class="line">    ...</span><br><span class="line">#endif</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">TSRM_API ts_rsrc_id ts_allocate_id(ts_rsrc_id *rsrc_id, size_t size, ts_allocate_ctor ctor, ts_allocate_dtor dtor)</span><br><span class="line">&#123;</span><br><span class="line">    //加锁，保证各线程串行调用此函数</span><br><span class="line">    tsrm_mutex_lock(tsmm_mutex);</span><br><span class="line"></span><br><span class="line">    //分配id，即id_count当前值，然后把id_count加1</span><br><span class="line">    *rsrc_id = TSRM_SHUFFLE_RSRC_ID(id_count++);</span><br><span class="line"></span><br><span class="line">    //检查resource_types_table数组当前大小是否已满</span><br><span class="line">    if (resource_types_table_size &lt; id_count) &#123;</span><br><span class="line">        //需要对resource_types_table扩容</span><br><span class="line">        resource_types_table = (tsrm_resource_type *) realloc(resource_types_table, sizeof(tsrm_resource_type)*id_count);</span><br><span class="line">        ...</span><br><span class="line">        //把数组大小修改新的大小</span><br><span class="line">        resource_types_table_size = id_count;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    //将新注册的资源插入resource_types_table数组，下标就是分配的资源id</span><br><span class="line">    resource_types_table[TSRM_UNSHUFFLE_RSRC_ID(*rsrc_id)].size = size;</span><br><span class="line">    resource_types_table[TSRM_UNSHUFFLE_RSRC_ID(*rsrc_id)].ctor = ctor;</span><br><span class="line">    resource_types_table[TSRM_UNSHUFFLE_RSRC_ID(*rsrc_id)].dtor = dtor;</span><br><span class="line">    resource_types_table[TSRM_UNSHUFFLE_RSRC_ID(*rsrc_id)].done = 0;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>根据上面的初始化和注册资源流程可以看出， <code>tsrm_tls_entry</code>  结构是 <code>resource_types_table</code> 的基本组成单位，<code>resource_types_table</code> 就是线程的资源聚集地， 在注册资源的时候，tsrm会给资源分配一个id，然后线程再去使用这个资源的时候，首先根据tread_id找到 分配的线程内存地址，然后再根据 资源id，找到资源在线程内存地址里面的地址</p>
+<h1 id="流程优化"><a href="#流程优化" class="headerlink" title="流程优化"></a>流程优化</h1><p>梳理一下，线程里面查找一个资源可以分为三步</p>
+<ol>
+<li>获取当前线程的thread_id</li>
+<li>根据thread_id获取tsrm_tls_entry，这个过程需要对tsrm_tls_table加锁，遍历链表</li>
+<li>根据资源id，获取tsrm_tls_entry里面的对应的资源</li>
+</ol>
+<p>线程对资源的操作是频繁的，每次都要进行上面三步操作是很费时的，而且第二步还需要加锁，这个将严重的影响性能。</p>
+<p>TSRM通过线程私有数据（Thread-Specific Data, TSD）优化了这个问题，TSD是由POSIX数据库维护的，使用同一名称为不同线程保存数据的一种存储形式，即各线程根据同名的key可以获取到不同的变量地址。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">// 创建名为key的TSD</span><br><span class="line">int pthread_key_create(pthread_key_t* keyp, void (*destructor)(void*) );</span><br><span class="line">// 销毁名为key的TSD</span><br><span class="line">int pthread_key_delete(pthread_key_t* key);</span><br><span class="line">// 根据key设置TSD</span><br><span class="line">int pthread_setspecific(pthread_key_t key, const void* value);</span><br><span class="line">// 根据key获取</span><br><span class="line">int pthread_setspecific(pthread_key_t key, const void* value);</span><br></pre></td></tr></table></figure>
+<p>如此，便可以将上面三步优化为下面两步</p>
+<ol>
+<li>根据资源id获取资源的地址</li>
+<li>根据资源地址，获取资源内容</li>
+</ol>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/PHP/" rel="tag"># PHP</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/posts/30726/" rel="next" title="浅析堆栈和内存溢出">
+                <i class="fa fa-chevron-left"></i> 浅析堆栈和内存溢出
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/posts/15998/" rel="prev" title="SeLinux引发的问题小记">
+                SeLinux引发的问题小记 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">TY·Loafer</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">50</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">19</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">38</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#核心思想"><span class="nav-number">1.</span> <span class="nav-text">核心思想</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#基本实现"><span class="nav-number">2.</span> <span class="nav-text">基本实现</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#tsrm-tls-table"><span class="nav-number">2.1.</span> <span class="nav-text">tsrm_tls_table</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#tsrm-tls-entry"><span class="nav-number">2.2.</span> <span class="nav-text">tsrm_tls_entry</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#tsrm-resource-type"><span class="nav-number">2.2.1.</span> <span class="nav-text">tsrm_resource_type</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#流程优化"><span class="nav-number">3.</span> <span class="nav-text">流程优化</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TY·Loafer</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://tyloafer.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://tyloafer.github.io/posts/56229/';
+          this.page.identifier = 'posts/56229/';
+          this.page.title = '深入理解PHP系列之线程安全';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://tyloafer.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

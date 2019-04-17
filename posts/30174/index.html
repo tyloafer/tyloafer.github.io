@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="PHP,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="TY·Loafer" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="PHP的数组是个很强大的存在，而且使用PHP的数组的时候，只要你能想到，基本都已实现，所以也让我慢慢忘记了排序算法的存在。近期，有个人问我，PHP的sort函数是怎么实现的，尴尬，在重温了一遍算法之后，根据我大学依稀存在的C语言基础，尝试阅读了一下PHP的sort函数实现的源码，以下是以PHP7.3源码为例，个人技术水平有限，仅供参考">
+<meta name="keywords" content="PHP">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深入PHP系列之PHP排序sort函数实现">
+<meta property="og:url" content="https://tyloafer.github.io/posts/30174/index.html">
+<meta property="og:site_name" content="TY·Loafer">
+<meta property="og:description" content="PHP的数组是个很强大的存在，而且使用PHP的数组的时候，只要你能想到，基本都已实现，所以也让我慢慢忘记了排序算法的存在。近期，有个人问我，PHP的sort函数是怎么实现的，尴尬，在重温了一遍算法之后，根据我大学依稀存在的C语言基础，尝试阅读了一下PHP的sort函数实现的源码，以下是以PHP7.3源码为例，个人技术水平有限，仅供参考">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-04-17T03:23:46.319Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="深入PHP系列之PHP排序sort函数实现">
+<meta name="twitter:description" content="PHP的数组是个很强大的存在，而且使用PHP的数组的时候，只要你能想到，基本都已实现，所以也让我慢慢忘记了排序算法的存在。近期，有个人问我，PHP的sort函数是怎么实现的，尴尬，在重温了一遍算法之后，根据我大学依稀存在的C语言基础，尝试阅读了一下PHP的sort函数实现的源码，以下是以PHP7.3源码为例，个人技术水平有限，仅供参考">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://tyloafer.github.io/posts/30174/">
+
+
+
+
+
+  <title>深入PHP系列之PHP排序sort函数实现 | TY·Loafer</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">TY·Loafer</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/30174/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">深入PHP系列之PHP排序sort函数实现</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-11-17T14:30:00+08:00">
+                2018-11-17
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-04-17T11:23:46+08:00">
+                2019-04-17
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/30174/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/30174/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>PHP的数组是个很强大的存在，而且使用PHP的数组的时候，只要你能想到，基本都已实现，所以也让我慢慢忘记了排序算法的存在。近期，有个人问我，PHP的sort函数是怎么实现的，尴尬，在重温了一遍算法之后，根据我大学依稀存在的C语言基础，尝试阅读了一下PHP的sort函数实现的源码，以下是以PHP7.3源码为例，个人技术水平有限，仅供参考</p>
+<a id="more"></a>
+<h1 id="sort"><a href="#sort" class="headerlink" title="sort"></a>sort</h1><blockquote>
+<p>bool <strong>sort</strong>    ( array <code>&amp;$array</code>   [, int <code>$sort_flags</code> = SORT_REGULAR  ] )</p>
+</blockquote>
+<p>首先我们在 <code>php_srray.h</code> 中可以看到array 中 相关 排序函数的定义</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">PHP_FUNCTION(ksort);</span><br><span class="line">PHP_FUNCTION(krsort);</span><br><span class="line">PHP_FUNCTION(natsort);</span><br><span class="line">PHP_FUNCTION(natcasesort);</span><br><span class="line">PHP_FUNCTION(asort);</span><br><span class="line">PHP_FUNCTION(arsort);</span><br><span class="line">PHP_FUNCTION(sort);</span><br><span class="line">PHP_FUNCTION(rsort);</span><br><span class="line">PHP_FUNCTION(usort);</span><br><span class="line">....</span><br></pre></td></tr></table></figure>
+<p>然后进入<code>array.c</code> 找到 <code>PHP_FUNCTION(sort)</code> 的实现</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">PHP_FUNCTION(sort)</span><br><span class="line">&#123;</span><br><span class="line">    zval *array;</span><br><span class="line">    zend_long sort_type = PHP_SORT_REGULAR;</span><br><span class="line">    compare_func_t cmp;</span><br><span class="line"></span><br><span class="line">    ZEND_PARSE_PARAMETERS_START(1, 2)</span><br><span class="line">        Z_PARAM_ARRAY_EX(array, 0, 1)</span><br><span class="line">        Z_PARAM_OPTIONAL</span><br><span class="line">        Z_PARAM_LONG(sort_type)</span><br><span class="line">    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);</span><br><span class="line"></span><br><span class="line">    cmp = php_get_data_compare_func(sort_type, 0);</span><br><span class="line"></span><br><span class="line">    if (zend_hash_sort(Z_ARRVAL_P(array), cmp, 1) == FAILURE) &#123;</span><br><span class="line">        RETURN_FALSE;</span><br><span class="line">    &#125;</span><br><span class="line">    RETURN_TRUE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol>
+<li><code>ZEND_PARSE_PARAMETERS_START</code>  <code>ZEND_PARSE_PARAMETERS_END_EX</code> ，在 <code>zend_api.h</code> 中有定义及实现， 主要是进行参数的校验转换等操作</li>
+<li><code>php_get_data_compare_func</code> 设置比较函数， 也就是根据 sort_flag 来决定</li>
+<li><code>zend_hash_sort</code> 这里开始了正式的排序</li>
+</ol>
+<h1 id="zend-hash-sort"><a href="#zend-hash-sort" class="headerlink" title="zend_hash_sort"></a>zend_hash_sort</h1><p>这个定义在 <code>zend_hash.h</code> 中</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">#define zend_hash_sort(ht, compare_func, renumber) \</span><br><span class="line">    zend_hash_sort_ex(ht, zend_sort, compare_func, renumber)</span><br></pre></td></tr></table></figure>
+<p>这里将 <code>zend_hash_sort</code>  的方法转到了 <code>zend_hash_sort_ex</code> 的方法，接下来继续查看 <code>zend_hash_sort_ex</code> 即可</p>
+<h1 id="zend-hash-sort-ex"><a href="#zend-hash-sort-ex" class="headerlink" title="zend_hash_sort_ex"></a>zend_hash_sort_ex</h1><p>这个定义在 <code>zend_hash.h</code> 中，在<code>zend_hash.c</code> 中实现</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><span class="line">ZEND_API int ZEND_FASTCALL zend_hash_sort_ex(HashTable *ht, sort_func_t sort, compare_func_t compar, zend_bool renumber)</span><br><span class="line">&#123;</span><br><span class="line">    Bucket *p;</span><br><span class="line">    uint32_t i, j;</span><br><span class="line"></span><br><span class="line">    IS_CONSISTENT(ht);</span><br><span class="line">    HT_ASSERT_RC1(ht);</span><br><span class="line"></span><br><span class="line">    if (!(ht-&gt;nNumOfElements&gt;1) &amp;&amp; !(renumber &amp;&amp; ht-&gt;nNumOfElements&gt;0)) &#123; /* Doesn&apos;t require sorting */</span><br><span class="line">        return SUCCESS;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    if (HT_IS_WITHOUT_HOLES(ht)) &#123;</span><br><span class="line">        i = ht-&gt;nNumUsed;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        for (j = 0, i = 0; j &lt; ht-&gt;nNumUsed; j++) &#123;</span><br><span class="line">            p = ht-&gt;arData + j;</span><br><span class="line">            if (UNEXPECTED(Z_TYPE(p-&gt;val) == IS_UNDEF)) continue;</span><br><span class="line">            if (i != j) &#123;</span><br><span class="line">                ht-&gt;arData[i] = *p;</span><br><span class="line">            &#125;</span><br><span class="line">            i++;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    sort((void *)ht-&gt;arData, i, sizeof(Bucket), compar,</span><br><span class="line">            (swap_func_t)(renumber? zend_hash_bucket_renum_swap :</span><br><span class="line">                ((HT_FLAGS(ht) &amp; HASH_FLAG_PACKED) ? zend_hash_bucket_packed_swap : zend_hash_bucket_swap)));</span><br><span class="line"></span><br><span class="line">    ht-&gt;nNumUsed = i;</span><br><span class="line">    ht-&gt;nInternalPointer = 0;</span><br><span class="line"></span><br><span class="line">    if (renumber) &#123;</span><br><span class="line">        for (j = 0; j &lt; i; j++) &#123;</span><br><span class="line">            p = ht-&gt;arData + j;</span><br><span class="line">            p-&gt;h = j;</span><br><span class="line">            if (p-&gt;key) &#123;</span><br><span class="line">                zend_string_release(p-&gt;key);</span><br><span class="line">                p-&gt;key = NULL;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        ht-&gt;nNextFreeElement = i;</span><br><span class="line">    &#125;</span><br><span class="line">    if (HT_FLAGS(ht) &amp; HASH_FLAG_PACKED) &#123;</span><br><span class="line">        if (!renumber) &#123;</span><br><span class="line">            zend_hash_packed_to_hash(ht);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        if (renumber) &#123;</span><br><span class="line">            void *new_data, *old_data = HT_GET_DATA_ADDR(ht);</span><br><span class="line">            Bucket *old_buckets = ht-&gt;arData;</span><br><span class="line"></span><br><span class="line">            new_data = pemalloc(HT_SIZE_EX(ht-&gt;nTableSize, HT_MIN_MASK), (GC_FLAGS(ht) &amp; IS_ARRAY_PERSISTENT));</span><br><span class="line">            HT_FLAGS(ht) |= HASH_FLAG_PACKED | HASH_FLAG_STATIC_KEYS;</span><br><span class="line">            ht-&gt;nTableMask = HT_MIN_MASK;</span><br><span class="line">            HT_SET_DATA_ADDR(ht, new_data);</span><br><span class="line">            memcpy(ht-&gt;arData, old_buckets, sizeof(Bucket) * ht-&gt;nNumUsed);</span><br><span class="line">            pefree(old_data, GC_FLAGS(ht) &amp; IS_ARRAY_PERSISTENT);</span><br><span class="line">            HT_HASH_RESET_PACKED(ht);</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            zend_hash_rehash(ht);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    return SUCCESS;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol>
+<li>第13行开始，判断这个hash表是否有空洞， 如果有的话，遍历整个hash表并填补空洞</li>
+<li>使用sort方法来进行 这个hash表的排序， 这里的sort其实是个指针，由<code>zend_hash_sort_ex</code> 的第二个参数 <strong>sort_func_t sort</strong> 传递过来，根据上一部分 <code>zend_hash_sort</code> 的实现代码，可以看出，这里的sort，其实是指向了 <strong>zend_sort</strong> 这个方法</li>
+<li>30行以后就是排序完成后的操作了，不是主要，就不多废话了</li>
+</ol>
+<h1 id="zend-sort"><a href="#zend-sort" class="headerlink" title="zend_sort"></a>zend_sort</h1><p>这个在<code>zend_sort.h</code>中定义，在 <code>zend_sort.c</code> 中实现</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line">ZEND_API void zend_sort(void *base, size_t nmemb, size_t siz, compare_func_t cmp, swap_func_t swp)</span><br><span class="line">&#123;</span><br><span class="line">	while (1) &#123;</span><br><span class="line">		if (nmemb &lt;= 16) &#123;</span><br><span class="line">			zend_insert_sort(base, nmemb, siz, cmp, swp);</span><br><span class="line">			return;</span><br><span class="line">		&#125; else &#123;</span><br><span class="line">			char *i, *j;</span><br><span class="line">			char *start = (char *)base;</span><br><span class="line">			char *end = start + (nmemb * siz);</span><br><span class="line">			size_t offset = (nmemb &gt;&gt; Z_L(1));</span><br><span class="line">			char *pivot = start + (offset * siz);</span><br><span class="line"></span><br><span class="line">			if ((nmemb &gt;&gt; Z_L(10))) &#123;</span><br><span class="line">				size_t delta = (offset &gt;&gt; Z_L(1)) * siz;</span><br><span class="line">				zend_sort_5(start, start + delta, pivot, pivot + delta, end - siz, cmp, swp);</span><br><span class="line">			&#125; else &#123;</span><br><span class="line">				zend_sort_3(start, pivot, end - siz, cmp, swp);</span><br><span class="line">			&#125;</span><br><span class="line">			swp(start + siz, pivot);</span><br><span class="line">			pivot = start + siz;</span><br><span class="line">			i = pivot + siz;</span><br><span class="line">			j = end - siz;</span><br><span class="line">			while (1) &#123;</span><br><span class="line">				while (cmp(pivot, i) &gt; 0) &#123;</span><br><span class="line">					i += siz;</span><br><span class="line">					if (UNEXPECTED(i == j)) &#123;</span><br><span class="line">						goto done;</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;</span><br><span class="line">				j -= siz;</span><br><span class="line">				if (UNEXPECTED(j == i)) &#123;</span><br><span class="line">					goto done;</span><br><span class="line">				&#125;</span><br><span class="line">				while (cmp(j, pivot) &gt; 0) &#123;</span><br><span class="line">					j -= siz;</span><br><span class="line">					if (UNEXPECTED(j == i)) &#123;</span><br><span class="line">						goto done;</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;</span><br><span class="line">				swp(i, j);</span><br><span class="line">				i += siz;</span><br><span class="line">				if (UNEXPECTED(i == j)) &#123;</span><br><span class="line">					goto done;</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">done:</span><br><span class="line">			swp(pivot, i - siz);</span><br><span class="line">			if ((i - siz) - start &lt; end - i) &#123;</span><br><span class="line">				zend_sort(start, (i - start)/siz - 1, siz, cmp, swp);</span><br><span class="line">				base = i;</span><br><span class="line">				nmemb = (end - i)/siz;</span><br><span class="line">			&#125; else &#123;</span><br><span class="line">				zend_sort(i, (end - i)/siz, siz, cmp, swp);</span><br><span class="line">				nmemb = (i - start)/siz - 1;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol>
+<li>4-7行进行了判断， 如果元素总数 &lt;= 16 ，则进行插入排序，这是很正常的，因为插入排序在最好的情况下时O(n) 级的算法，而数据量小的情况下，数据有序的可能性就越高，也就符合了最好的情况</li>
+<li>后面就是 如果元素总数  &gt; 16， 则开始了另外一种排序，首先确定了头元素和尾元素，并让元素总数右移一位作为基准， 这里涉及一个函数 <code>Z_L</code> ，后面做补充解释</li>
+<li>继续判断 <code>nmemb &gt;&gt; Z_L(10)</code> 如果 元素总数 右移 10位，依然大于 0的话，选取的偏移数 再向右偏移 1位 作为 delta， 然后  <code>zend_sort_5(start, start + delta, pivot, pivot + delta, end - siz, cmp, swp);</code> 进行交换，否则 执行 <code>zend_sort_3(start, pivot, end - siz, cmp, swp);</code> 执行排序</li>
+<li>下面就是标准的快速排序的操作思路了，只是一般我们会使用递归来处理，但是递归会消耗空间，所以 PHP源码里面选择了非递归的方式</li>
+</ol>
+<h1 id="Z-L"><a href="#Z-L" class="headerlink" title="Z_L"></a>Z_L</h1><p>这里在 <code>zend_long.h</code> 中有定义</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># define Z_L(i) INT64_C(i)</span><br></pre></td></tr></table></figure>
+<p>然后继续看 <code>INT64_C</code> </p>
+<h1 id="INI64-C"><a href="#INI64-C" class="headerlink" title="INI64_C"></a>INI64_C</h1><p>这个在 <code>php_stdint.h</code> 中有定义</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">#ifndef INT64_C</span><br><span class="line"># if SIZEOF_INT &gt;= 8</span><br><span class="line">#  define INT64_C(c) c</span><br><span class="line"># elif SIZEOF_LONG &gt;= 8</span><br><span class="line">#  define INT64_C(c) c ## L</span><br><span class="line"># elif SIZEOF_LONG_LONG &gt;= 8</span><br><span class="line">#  define INT64_C(c) c ## LL</span><br><span class="line"># endif</span><br><span class="line">#endif</span><br></pre></td></tr></table></figure>
+<h1 id="zend-sort-3"><a href="#zend-sort-3" class="headerlink" title="zend_sort_3"></a>zend_sort_3</h1><p>这个函数也是在 <code>zend_sort.c</code>中实现的，主要就是判断，然后交换</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">static inline void zend_sort_3(void *a, void *b, void *c, compare_func_t cmp, swap_func_t swp) /* &#123;&#123;&#123; */ &#123;</span><br><span class="line">	if (!(cmp(a, b) &gt; 0)) &#123;</span><br><span class="line">		if (!(cmp(b, c) &gt; 0)) &#123;</span><br><span class="line">			return;</span><br><span class="line">		&#125;</span><br><span class="line">		swp(b, c);</span><br><span class="line">		if (cmp(a, b) &gt; 0) &#123;</span><br><span class="line">			swp(a, b);</span><br><span class="line">		&#125;</span><br><span class="line">		return;</span><br><span class="line">	&#125;</span><br><span class="line">	if (!(cmp(c, b) &gt; 0)) &#123;</span><br><span class="line">		swp(a, c);</span><br><span class="line">		return;</span><br><span class="line">	&#125;</span><br><span class="line">	swp(a, b);</span><br><span class="line">	if (cmp(b, c) &gt; 0) &#123;</span><br><span class="line">		swp(b, c);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>综上分析，php的sort函数在元素数 较小(16个及以下)的时候，使用插入排序，否则使用非递归的快速排序来进行排序。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/PHP/" rel="tag"># PHP</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/posts/47934/" rel="next" title="深入PHP系列-变量分离与引用">
+                <i class="fa fa-chevron-left"></i> 深入PHP系列-变量分离与引用
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/posts/17570/" rel="prev" title="深入PHP系列之PHP数组底层的实现">
+                深入PHP系列之PHP数组底层的实现 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">TY·Loafer</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">50</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">19</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">38</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#sort"><span class="nav-number">1.</span> <span class="nav-text">sort</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#zend-hash-sort"><span class="nav-number">2.</span> <span class="nav-text">zend_hash_sort</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#zend-hash-sort-ex"><span class="nav-number">3.</span> <span class="nav-text">zend_hash_sort_ex</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#zend-sort"><span class="nav-number">4.</span> <span class="nav-text">zend_sort</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Z-L"><span class="nav-number">5.</span> <span class="nav-text">Z_L</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#INI64-C"><span class="nav-number">6.</span> <span class="nav-text">INI64_C</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#zend-sort-3"><span class="nav-number">7.</span> <span class="nav-text">zend_sort_3</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">8.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TY·Loafer</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://tyloafer.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://tyloafer.github.io/posts/30174/';
+          this.page.identifier = 'posts/30174/';
+          this.page.title = '深入PHP系列之PHP排序sort函数实现';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://tyloafer.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

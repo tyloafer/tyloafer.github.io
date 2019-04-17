@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Linux,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="TY·Loafer" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="在Linux进行权限管理接触最多的应该就是 chmod chown ，但是用的时间长了就会发现很多弊端，很明显的就是root用户用的越来越多， 777权限的文件越来越多，部分原因是开发者过懒导致的，但是简单的chmod chown 会误杀很多用户也是一部分原因。那么接下来就介绍一下更为聪明和牛逼的权限控制—-ACL">
+<meta name="keywords" content="Linux">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux权限控制-ACL">
+<meta property="og:url" content="https://tyloafer.github.io/posts/45399/index.html">
+<meta property="og:site_name" content="TY·Loafer">
+<meta property="og:description" content="在Linux进行权限管理接触最多的应该就是 chmod chown ，但是用的时间长了就会发现很多弊端，很明显的就是root用户用的越来越多， 777权限的文件越来越多，部分原因是开发者过懒导致的，但是简单的chmod chown 会误杀很多用户也是一部分原因。那么接下来就介绍一下更为聪明和牛逼的权限控制—-ACL">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-04-17T03:23:46.319Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Linux权限控制-ACL">
+<meta name="twitter:description" content="在Linux进行权限管理接触最多的应该就是 chmod chown ，但是用的时间长了就会发现很多弊端，很明显的就是root用户用的越来越多， 777权限的文件越来越多，部分原因是开发者过懒导致的，但是简单的chmod chown 会误杀很多用户也是一部分原因。那么接下来就介绍一下更为聪明和牛逼的权限控制—-ACL">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://tyloafer.github.io/posts/45399/">
+
+
+
+
+
+  <title>Linux权限控制-ACL | TY·Loafer</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">TY·Loafer</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/45399/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Linux权限控制-ACL</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-07-21T19:40:00+08:00">
+                2018-07-21
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-04-17T11:23:46+08:00">
+                2019-04-17
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Linux/" itemprop="url" rel="index">
+                    <span itemprop="name">Linux</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/45399/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/45399/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在Linux进行权限管理接触最多的应该就是 <code>chmod</code> <code>chown</code> ，但是用的时间长了就会发现很多弊端，很明显的就是root用户用的越来越多， 777权限的文件越来越多，部分原因是开发者过懒导致的，但是简单的<code>chmod</code> <code>chown</code> 会误杀很多用户也是一部分原因。那么接下来就介绍一下更为聪明和牛逼的权限控制—-ACL</p>
+<a id="more"></a>
+<p><strong>访问控制表</strong>（Access Control List，ACL），又称<strong>存取控制串列</strong>，是使用以<a href="https://zh.wikipedia.org/wiki/%E5%AD%98%E5%8F%96%E6%8E%A7%E5%88%B6%E7%9F%A9%E9%99%A3" target="_blank" rel="noopener">访问控制矩阵</a>为基础的访问控制方法，每一个对象对应一个串列主体<br>。访问控制表描述每一个对象各自的访问控制，并记录可对此对象进行访问的所有主体对对象的权限。</p>
+<ul>
+<li><p>Linux文件系统ACL功能</p>
+<p>主要的目的是在提供传统的 owner,group,others 的 read,write,execute 权限之外的细部权限设置。ACL 可以针对单一使用者，单一文件或目录来进行 r,w,x 的权限规范，对于需要特殊权限的使用状况非常有帮助。</p>
+<p>简而言之，ACL功能是为了加强Linux系统文件权限管理。</p>
+</li>
+</ul>
+<h1 id="开启-ACL-权限"><a href="#开启-ACL-权限" class="headerlink" title="开启 ACL 权限"></a>开启 ACL 权限</h1><p>对于CentOS6，系统安装时的分区支持acl,额外的文件系统挂载时需添加acl选项。</p>
+<blockquote>
+<p>mount -o remount, acl [mount point]</p>
+</blockquote>
+<p>对于CentOS7，默认支持acl功能。</p>
+<h1 id="查看和设置文件-ACL-权限"><a href="#查看和设置文件-ACL-权限" class="headerlink" title="查看和设置文件 ACL 权限"></a>查看和设置文件 ACL 权限</h1><p>设置 ACL 权限用<code>setfacl -m [u|g]:[用户名|组名]:权限 文件名</code>命令。<br>查看 ACL 权限用<code>getfacl 文件名</code></p>
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>说明</th>
+<th>使用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>m</td>
+<td>设置 ACL 权限</td>
+<td>setfacl -m [u\</td>
+<td>g]:[用户名 \</td>
+<td>组名]: 权限 文件名</td>
+</tr>
+<tr>
+<td>x</td>
+<td>删除指定 ACL 权限</td>
+<td>setfacl -x [u\</td>
+<td>g]:[用户名 \</td>
+<td>组名] 文件名</td>
+</tr>
+<tr>
+<td>b</td>
+<td>删除全部 ACL 权限</td>
+<td>setfacl -b 文件名</td>
+</tr>
+<tr>
+<td>d</td>
+<td>设定默认 ACL 权限 (子文件继承目录 ACL 权限)</td>
+<td>setfacl -m d:[u\</td>
+<td>g]:[用户名 \</td>
+<td>组名]: 权限 文件名</td>
+</tr>
+<tr>
+<td>k</td>
+<td>删除默认 ACL 权限 (子文件继承目录 ACL 权限)</td>
+<td>setfacl -m</td>
+</tr>
+<tr>
+<td>R</td>
+<td>递归设置 ACL 权限 (容易给文件 x 权限)</td>
+<td>setfacl -m [u\</td>
+<td>g]:[用户名 \</td>
+<td>组名]: 权限 -R 目录名</td>
+</tr>
+</tbody>
+</table>
+<p>eg:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"># 1. 创建权限为drwxrwx---, 用户和用户组为root的dir目录</span><br><span class="line">[root@localhost ~]# mkdir ~ahao/dir </span><br><span class="line">[root@localhost ~]# chmod 770 ~ahao/dir</span><br><span class="line">[root@localhost ~]# ll ~ahao</span><br><span class="line">总用量 0</span><br><span class="line">drwxrwx---. 2 root root 6 11月  4 22:32 dir</span><br><span class="line"></span><br><span class="line"># 2. 操作1: ahao用户尝试进入dir目录失败, 权限不足</span><br><span class="line">[ahao@localhost ~]$ cd dir</span><br><span class="line">-bash: cd: dir: 权限不够</span><br><span class="line"></span><br><span class="line"># 3. root用户设置ACL权限, 给ahao用户赋予rx权限</span><br><span class="line">[root@localhost ~]# setfacl -m u:ahao:rx ~ahao/dir</span><br><span class="line">[ahao@localhost ~]$ ll</span><br><span class="line">总用量 0</span><br><span class="line">drwxrwx---+ 2 root root 6 11月  4 22:32 dir</span><br><span class="line"></span><br><span class="line"># 4. 操作2: ahao用户尝试进入dir目录成功, dir的+权限位代表ACL权限</span><br><span class="line">[ahao@localhost ~]$ cd dir</span><br><span class="line">[ahao@localhost dir]$ # 成功进入dir目录 </span><br><span class="line"></span><br><span class="line"># 5. 操作3: 查看ACL权限</span><br><span class="line">[ahao@localhost dir]$ getfacl ~ahao/dir/ </span><br><span class="line">getfacl: Removing leading &apos;/&apos; from absolute path names</span><br><span class="line"># file: home/ahao/dir/</span><br><span class="line"># owner: root</span><br><span class="line"># group: root</span><br><span class="line">user::rwx</span><br><span class="line">user:ahao:r-x # ACL权限</span><br><span class="line">group::rwx</span><br><span class="line">mask::rwx</span><br><span class="line">other::---</span><br></pre></td></tr></table></figure>
+<h1 id="mask-掩码"><a href="#mask-掩码" class="headerlink" title="mask 掩码"></a>mask 掩码</h1><p>上面的例子在使用<code>getfacl dir</code>之后, 可以看到有一项是<code>mask</code>。<br>这个和默认权限<code>umask</code>差不多, 也是一个权限掩码, 表示所能赋予的权限最大值。<br>这里的<code>mask</code>和<code>ACL权限</code>进行<code>&amp;与</code>运算, 得到的才是真正的<code>ACL权限</code>。<br>用人话讲, 就是</p>
+<blockquote>
+<p>你考一百分是因为实力只有一百分<br>我考一百分是因为总分只有一百分</p>
+</blockquote>
+<p><code>mask</code>限制了权限的最高值。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"># 1. 修改ACL权限mask为r-x</span><br><span class="line">[root@localhost ~]# setfacl -m m:rx ~ahao/tmp/av </span><br><span class="line">[root@localhost ~]# getfacl ~ahao/tmp/av</span><br><span class="line">getfacl: Removing leading &apos;/&apos; from absolute path names</span><br><span class="line"># file: home/ahao/tmp/av</span><br><span class="line"># owner: root</span><br><span class="line"># group: root</span><br><span class="line">user::rwx</span><br><span class="line">group::r-x</span><br><span class="line">mask::r-x # 修改ACL权限mask为r-x</span><br><span class="line">other::---</span><br><span class="line"></span><br><span class="line"># 2. 为用户ahao添加ACL权限rwx</span><br><span class="line">[root@localhost ~]# setfacl -m u:ahao:rwx ~ahao/tmp/av/ </span><br><span class="line">[root@localhost ~]# getfacl ~ahao/tmp/av</span><br><span class="line">getfacl: Removing leading &apos;/&apos; from absolute path names</span><br><span class="line"># file: home/ahao/tmp/av</span><br><span class="line"># owner: root</span><br><span class="line"># group: root</span><br><span class="line">user::rwx</span><br><span class="line">user:ahao:rwx</span><br><span class="line">group::r-x</span><br><span class="line">mask::rwx # 注意, 这里的mask掩码会改变, 因为赋予的ACL权限大于mask</span><br><span class="line">other::---</span><br><span class="line"></span><br><span class="line"># 3. 修改ACL权限mask为r-x</span><br><span class="line">[root@localhost ~]# setfacl -m m:rx ~ahao/tmp/av</span><br><span class="line">[root@localhost ~]# getfacl ~ahao/tmp/av</span><br><span class="line">getfacl: Removing leading &apos;/&apos; from absolute path names</span><br><span class="line"># file: home/ahao/tmp/av</span><br><span class="line"># owner: root</span><br><span class="line"># group: root</span><br><span class="line">user::rwx</span><br><span class="line">user:ahao:rwx			#effective:r-x # 这里会提示真实的ACL权限为r-x</span><br><span class="line">group::r-x</span><br><span class="line">mask::r-x # 这里mask不会再改变</span><br><span class="line">other::---</span><br></pre></td></tr></table></figure>
+<ol>
+<li><code>mask</code> 会限制 <code>ACL</code> 权限的最大值。</li>
+<li>赋予<code>ACL</code> 权限大于 <code>mask</code> 的时候, 会将 <code>mask</code> <strong>撑大</strong>。</li>
+</ol>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Linux/" rel="tag"># Linux</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/posts/27510/" rel="next" title="Nginx倒腾笔记（六）：Nginx tcp/udp转发">
+                <i class="fa fa-chevron-left"></i> Nginx倒腾笔记（六）：Nginx tcp/udp转发
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/posts/15205/" rel="prev" title="php配置xdebug实现内网本地调试远程服务器">
+                php配置xdebug实现内网本地调试远程服务器 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">TY·Loafer</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">50</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">19</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">38</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#开启-ACL-权限"><span class="nav-number">1.</span> <span class="nav-text">开启 ACL 权限</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#查看和设置文件-ACL-权限"><span class="nav-number">2.</span> <span class="nav-text">查看和设置文件 ACL 权限</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#mask-掩码"><span class="nav-number">3.</span> <span class="nav-text">mask 掩码</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TY·Loafer</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://tyloafer.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://tyloafer.github.io/posts/45399/';
+          this.page.identifier = 'posts/45399/';
+          this.page.title = 'Linux权限控制-ACL';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://tyloafer.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

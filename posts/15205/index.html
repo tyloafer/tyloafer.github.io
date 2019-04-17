@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="PHP,Xdebug,Sublime,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="TY·Loafer" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="对于一般的项目来说，print_r() echo file_put_contents() exit 这些函数调试就足够了，但是如果你调试的环境还有其他人，那就略胃疼了 服务器环境：centos7 php7.0 本地环境：windows php7.2（压缩包） 本地环境是公司内网，所以中间会借助xshell做一次tcp的转发">
+<meta name="keywords" content="PHP,Xdebug,Sublime">
+<meta property="og:type" content="article">
+<meta property="og:title" content="php配置xdebug实现内网本地调试远程服务器">
+<meta property="og:url" content="https://tyloafer.github.io/posts/15205/index.html">
+<meta property="og:site_name" content="TY·Loafer">
+<meta property="og:description" content="对于一般的项目来说，print_r() echo file_put_contents() exit 这些函数调试就足够了，但是如果你调试的环境还有其他人，那就略胃疼了 服务器环境：centos7 php7.0 本地环境：windows php7.2（压缩包） 本地环境是公司内网，所以中间会借助xshell做一次tcp的转发">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://github-1253518569.cossh.myqcloud.com/xshell-1.png">
+<meta property="og:image" content="http://github-1253518569.cossh.myqcloud.com/xshell-2.png">
+<meta property="og:image" content="http://github-1253518569.cossh.myqcloud.com/xshell-3.png">
+<meta property="og:image" content="http://github-1253518569.cossh.myqcloud.com/phpstrome-1.png">
+<meta property="og:image" content="http://github-1253518569.cossh.myqcloud.com/phpstrome-29.png">
+<meta property="og:image" content="http://github-1253518569.cossh.myqcloud.com/phpstrome-3.png">
+<meta property="og:image" content="http://github-1253518569.cossh.myqcloud.com/phpstrom-4.png">
+<meta property="og:image" content="http://github-1253518569.cossh.myqcloud.com/phpstrom-5.png">
+<meta property="og:image" content="http://github-1253518569.cossh.myqcloud.com/postman-1.png">
+<meta property="og:image" content="http://github-1253518569.cossh.myqcloud.com/postman-2.png">
+<meta property="og:updated_time" content="2019-04-17T03:23:46.331Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="php配置xdebug实现内网本地调试远程服务器">
+<meta name="twitter:description" content="对于一般的项目来说，print_r() echo file_put_contents() exit 这些函数调试就足够了，但是如果你调试的环境还有其他人，那就略胃疼了 服务器环境：centos7 php7.0 本地环境：windows php7.2（压缩包） 本地环境是公司内网，所以中间会借助xshell做一次tcp的转发">
+<meta name="twitter:image" content="http://github-1253518569.cossh.myqcloud.com/xshell-1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://tyloafer.github.io/posts/15205/">
+
+
+
+
+
+  <title>php配置xdebug实现内网本地调试远程服务器 | TY·Loafer</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">TY·Loafer</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/15205/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">php配置xdebug实现内网本地调试远程服务器</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-08-10T20:30:00+08:00">
+                2018-08-10
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-04-17T11:23:46+08:00">
+                2019-04-17
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/15205/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/15205/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>对于一般的项目来说，<code>print_r() echo file_put_contents() exit</code> 这些函数调试就足够了，但是如果你调试的环境还有其他人，那就略胃疼了</p>
+<p>服务器环境：centos7 php7.0</p>
+<p>本地环境：windows php7.2（压缩包）</p>
+<p>本地环境是公司内网，所以中间会借助xshell做一次tcp的转发</p>
+<a id="more"></a>
+<h1 id="服务器配置"><a href="#服务器配置" class="headerlink" title="服务器配置"></a>服务器配置</h1><h2 id="安装xdebug"><a href="#安装xdebug" class="headerlink" title="安装xdebug"></a>安装xdebug</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">yum install php70w* --skip-broken</span><br><span class="line">yum install php70w-pecl-xdebug</span><br></pre></td></tr></table></figure>
+<h2 id="配置xdebug"><a href="#配置xdebug" class="headerlink" title="配置xdebug"></a>配置xdebug</h2><p>修改xdebug的配置文件 <code>/etc/php.d/xdebug.ini</code></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">; Enable xdebug extension module</span><br><span class="line">zend_extension=/usr/lib64/php/modules/xdebug.so</span><br><span class="line">xdebug.idekey = &quot;PHPSTORM&quot;</span><br><span class="line">; 因为DBGp调试代理是可以做调试分发的，所以，定义一个IDEKEY，目的是让调试器知道，是不是发给自己的请求</span><br><span class="line"></span><br><span class="line">xdebug.remote_enable = 1</span><br><span class="line">; 设置为1的时候，会先参数链接到remote_host和remote_port指定的调试器端口，如果连接不上，就继续执行，类似设置&gt;了0</span><br><span class="line"></span><br><span class="line">xdebug.remote_mode = &quot;req&quot;</span><br><span class="line">xdebug.remote_handler = &quot;dbgp&quot;</span><br><span class="line">; 也就是调试走哪种协议，有老的PHP3协议，也有GDB协议，DBGP是当前的默认协议，也是当前主流支持的协议</span><br><span class="line"></span><br><span class="line">xdebug.remote_connect_back = 0</span><br><span class="line">; 如果为1，xdebug会通过$_SERVER[‘REMOTE_ADDR’]变量，向发起HTTP请求的客户端发起链接，和remote_host功能类似&gt;，但是优先级比remote_host高，所以，设置了这个选项就会忽略remote_host，由于我的运行时服务器不能主动链接IDE所&gt;在PC，所以不能开启自动回连模式(内网访问外网的网页，也不能开启)</span><br><span class="line"></span><br><span class="line">xdebug.remote_host = &quot;127.0.0.1&quot;</span><br><span class="line">; 默认是主机，如果服务器可以直接你的本地电脑，可以直接填写本机ip，我这里使用xshell做tcp转发</span><br><span class="line"></span><br><span class="line">xdebug.remote_port = 9909</span><br><span class="line">; 默认端口是9000，由于担心服务器端口冲突，我修改为9909，建议你没有端口冲突时不修改</span><br><span class="line"></span><br><span class="line">xdebug.remote_autostart = 0</span><br><span class="line">; 这个为1，会忽略COOKIE或者POST/GET中带的XDEBUG_SESSION参数，不管有没有，都会启动调试，所以，还是设置为0比较好，默认0</span><br></pre></td></tr></table></figure>
+<p>重启php-fpm</p>
+<h1 id="Xshell-TCP转发"><a href="#Xshell-TCP转发" class="headerlink" title="Xshell TCP转发"></a>Xshell TCP转发</h1><p>首先连上你需要配置的服务器或者找到目标服务器的会话设置，然后右键找到<code>属性</code> ，然后找到<code>连接 -&gt; ssh -&gt; 隧道 -&gt; 添加</code>，按如图所示添加，上面配置目标服务器，下面配置本机</p>
+<p><img src="http://github-1253518569.cossh.myqcloud.com/xshell-1.png" alt="配置属性"></p>
+<p><img src="http://github-1253518569.cossh.myqcloud.com/xshell-2.png" alt="配置属性"></p>
+<p><img src="http://github-1253518569.cossh.myqcloud.com/xshell-3.png" alt="tcp转发配置"></p>
+<p>配置完成后分别查看一下 目标服务器的9909 是否被监听</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">netstat -ano | grep 9909</span><br></pre></td></tr></table></figure>
+<h1 id="Sublime配置"><a href="#Sublime配置" class="headerlink" title="Sublime配置"></a>Sublime配置</h1><h2 id="Xdebug配置"><a href="#Xdebug配置" class="headerlink" title="Xdebug配置"></a>Xdebug配置</h2><p>首先通过 <code>package controller</code>安装 <code>xdebug client</code></p>
+<p>然后通过菜单栏的 <code>tool -&gt; Xdebug-&gt; Settings-default</code>， 可以找到xdebug的默认配置（简单摘取）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;path_mapping&quot;: &#123;</span><br><span class="line"></span><br><span class="line">    &#125;,</span><br><span class="line"></span><br><span class="line">    // Determine which URL to launch in the default web browser</span><br><span class="line">    // when starting/stopping a session.</span><br><span class="line">    &quot;url&quot;: &quot;&quot;,</span><br><span class="line">    &quot;ide_key&quot;: &quot;sublime.xdebug&quot;,</span><br><span class="line">    &quot;host&quot;: &quot;&quot;,</span><br><span class="line"></span><br><span class="line">    // Which port number Sublime Text should listen</span><br><span class="line">    // to connect with debugger engine.</span><br><span class="line">    &quot;port&quot;: 9000,</span><br><span class="line"></span><br><span class="line">	.</span><br><span class="line">	.</span><br><span class="line">	.</span><br><span class="line">	.</span><br><span class="line">    &quot;python_path&quot; : &quot;&quot;,</span><br><span class="line"></span><br><span class="line">    // Show detailed log information about communication</span><br><span class="line">    // between debugger engine and Sublime Text.</span><br><span class="line">    // Log can be found at Packages/User/Xdebug.log</span><br><span class="line">    &quot;debug&quot;: false</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>参考系统的配置及解释，用户可以自行定义 <code>tool -&gt; Xdebug-&gt; Settings-User</code> ，但是用户一般不是只有一个项目，所以个人还是建议针对于每个 project 进行设置，可以通过菜单栏 <code>Project -&gt; Edit Project</code>， 当然，你需要先创建一个project，这都是小事了。</p>
+<p>附上个人project配置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">	&quot;folders&quot;:</span><br><span class="line">	[</span><br><span class="line">		&#123;</span><br><span class="line">			&quot;path&quot;: &quot;.&quot;</span><br><span class="line">		&#125;</span><br><span class="line">	],</span><br><span class="line">	&quot;settings&quot;: &#123;</span><br><span class="line">		&quot;xdebug&quot;: &#123;</span><br><span class="line">			&quot;path_mapping&quot;: &#123;</span><br><span class="line">			    &quot;/data/www/html/httpserver&quot; : &quot;D:/workplace/cloudserver&quot;</span><br><span class="line">			&#125;,</span><br><span class="line">			&quot;url&quot;: &quot;http://121.xx.xx.xxx/httpserver/&quot;,</span><br><span class="line">			&quot;ide_key&quot;: &quot;PHPSTORM&quot;,</span><br><span class="line">			&quot;host&quot;: &quot;0.0.0.0&quot;,</span><br><span class="line">			&quot;port&quot;: 9050,</span><br><span class="line">			&quot;close_on_stop&quot;: true,</span><br><span class="line">			&quot;debug_layout&quot; : &#123;</span><br><span class="line">			    &quot;cols&quot;: [0.0, 0.5, 1.0],</span><br><span class="line">			    &quot;rows&quot;: [0.0, 0.7, 1.0],</span><br><span class="line">			    &quot;cells&quot;: [[0, 0, 2, 1], [0, 1, 1, 2], [1, 1, 2, 2]]</span><br><span class="line">			&#125;,</span><br><span class="line">			&quot;python_path&quot; : &quot;C:\\Program Files\\Python35\\python.exe&quot;,</span><br><span class="line">			&quot;debug&quot;: true</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="SFTP配置"><a href="#SFTP配置" class="headerlink" title="SFTP配置"></a>SFTP配置</h2><p>sftp配置就不多废话了，参考另一篇博客<a href="https://tyloafer.github.io/posts/45096/">Sublime倒腾系列：配置sftp实现文件上传下载</a></p>
+<h1 id="PHPStrom配置"><a href="#PHPStrom配置" class="headerlink" title="PHPStrom配置"></a>PHPStrom配置</h1><h2 id="SFTP配置-1"><a href="#SFTP配置-1" class="headerlink" title="SFTP配置"></a>SFTP配置</h2><p><code>Tools-&gt;Deployment-&gt;Configuration</code>，在弹出的对话框里一次填入用户名，密码，</p>
+<p><img src="http://github-1253518569.cossh.myqcloud.com/phpstrome-1.png" alt="phpstrom sft配置"></p>
+<p>然后右边旁边一个标签页 <code>Mappings</code></p>
+<p><img src="http://github-1253518569.cossh.myqcloud.com/phpstrome-29.png" alt="phpstrom-mapping"></p>
+<p>配置完成后，通过 <code>Tools—&gt;Deployment—&gt;Browse Remote Host</code> 看一下右侧是否会列出远程文件，显示绿色表名是对应上了</p>
+<h2 id="Server配置"><a href="#Server配置" class="headerlink" title="Server配置"></a>Server配置</h2><p>通过 <code>File -&gt; Settings -&gt; Languages &amp; Frameworks -&gt; PHP -&gt; Servers</code>   新建一个Server,输入服务器的IP和端口，最关键的是，将本地工程文件夹和服务器上的文件夹对应起来，方便调试的时候找到源码：</p>
+<p><img src="http://github-1253518569.cossh.myqcloud.com/phpstrome-3.png" alt="phpstrome server配置"></p>
+<h2 id="配置Debug"><a href="#配置Debug" class="headerlink" title="配置Debug"></a>配置Debug</h2><p>通过<code>Run -&gt; Edit Configurations -&gt; PHP Remote Debug</code>，创建一个新的配置，Servers就选择刚才配置的，Ide Key设置为php.ini里面xdebug.idekey设置的， 这里就是 <strong>PHPSTROME</strong></p>
+<p><img src="http://github-1253518569.cossh.myqcloud.com/phpstrom-4.png" alt="phpstrom remote debug"></p>
+<h2 id="调试（全部配置结束后测试）"><a href="#调试（全部配置结束后测试）" class="headerlink" title="调试（全部配置结束后测试）"></a>调试（全部配置结束后测试）</h2><p><img src="http://github-1253518569.cossh.myqcloud.com/phpstrom-5.png" alt="调试"></p>
+<h1 id="Postman配置"><a href="#Postman配置" class="headerlink" title="Postman配置"></a>Postman配置</h1><p>Postman 地址： <a href="https://chrome.google.com/webstore/detail/postman/agkicnjkbankpckaomnhfjglafjcegkk?hl=zh-CN" target="_blank" rel="noopener">谷歌商店</a></p>
+<p>Postman Interceptor 地址： <a href="https://chrome.google.com/webstore/detail/postman-interceptor/aicmkgpgakddgnaphhhpliifpcfhicfo?hl=zh-CN" target="_blank" rel="noopener">谷歌商店</a></p>
+<p>安装完成后，打开<strong>Postman</strong>， 在右上角开启 <strong>Postman Interceptor</strong> 即可设置cookie 进行请求了</p>
+<p><img src="http://github-1253518569.cossh.myqcloud.com/postman-1.png" alt="postman"></p>
+<p>这时候，只要在模拟请求的时候设置一下cookie，在 <strong>phpstrom</strong> 或 <strong>sublime</strong> 设置一下断点就ok了</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Cookie:XDEBUG_SESSION=PHPSTORM</span><br></pre></td></tr></table></figure>
+<p><img src="http://github-1253518569.cossh.myqcloud.com/postman-2.png" alt="postman cookie设置"></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/PHP/" rel="tag"># PHP</a>
+          
+            <a href="/tags/Xdebug/" rel="tag"># Xdebug</a>
+          
+            <a href="/tags/Sublime/" rel="tag"># Sublime</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/posts/45399/" rel="next" title="Linux权限控制-ACL">
+                <i class="fa fa-chevron-left"></i> Linux权限控制-ACL
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/posts/34556/" rel="prev" title="Nginx倒腾笔记（六）：SSL_do_handshake() failed">
+                Nginx倒腾笔记（六）：SSL_do_handshake() failed <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">TY·Loafer</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">50</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">19</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">38</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#服务器配置"><span class="nav-number">1.</span> <span class="nav-text">服务器配置</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#安装xdebug"><span class="nav-number">1.1.</span> <span class="nav-text">安装xdebug</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#配置xdebug"><span class="nav-number">1.2.</span> <span class="nav-text">配置xdebug</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Xshell-TCP转发"><span class="nav-number">2.</span> <span class="nav-text">Xshell TCP转发</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Sublime配置"><span class="nav-number">3.</span> <span class="nav-text">Sublime配置</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Xdebug配置"><span class="nav-number">3.1.</span> <span class="nav-text">Xdebug配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SFTP配置"><span class="nav-number">3.2.</span> <span class="nav-text">SFTP配置</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#PHPStrom配置"><span class="nav-number">4.</span> <span class="nav-text">PHPStrom配置</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#SFTP配置-1"><span class="nav-number">4.1.</span> <span class="nav-text">SFTP配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Server配置"><span class="nav-number">4.2.</span> <span class="nav-text">Server配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#配置Debug"><span class="nav-number">4.3.</span> <span class="nav-text">配置Debug</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#调试（全部配置结束后测试）"><span class="nav-number">4.4.</span> <span class="nav-text">调试（全部配置结束后测试）</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Postman配置"><span class="nav-number">5.</span> <span class="nav-text">Postman配置</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TY·Loafer</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://tyloafer.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://tyloafer.github.io/posts/15205/';
+          this.page.identifier = 'posts/15205/';
+          this.page.title = 'php配置xdebug实现内网本地调试远程服务器';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://tyloafer.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

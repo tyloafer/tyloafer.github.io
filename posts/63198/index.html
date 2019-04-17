@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="PHP,优化,大文件,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="TY·Loafer" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="起因这是偶然间看到的一篇文章，感觉收获颇丰，故转载。转载自芦雨强的网络日志 干货分割线作为一个PHP开发者，我们经常需要关注内存管理。PHP引擎在我们运行脚本之后做了很好的清理工作，短周期执行的web服务器模型意味着即使是烂代码也不会长时间影响。">
+<meta name="keywords" content="PHP,优化,大文件">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PHP如何读取大文件">
+<meta property="og:url" content="https://tyloafer.github.io/posts/63198/index.html">
+<meta property="og:site_name" content="TY·Loafer">
+<meta property="og:description" content="起因这是偶然间看到的一篇文章，感觉收获颇丰，故转载。转载自芦雨强的网络日志 干货分割线作为一个PHP开发者，我们经常需要关注内存管理。PHP引擎在我们运行脚本之后做了很好的清理工作，短周期执行的web服务器模型意味着即使是烂代码也不会长时间影响。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-04-17T03:23:46.322Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="PHP如何读取大文件">
+<meta name="twitter:description" content="起因这是偶然间看到的一篇文章，感觉收获颇丰，故转载。转载自芦雨强的网络日志 干货分割线作为一个PHP开发者，我们经常需要关注内存管理。PHP引擎在我们运行脚本之后做了很好的清理工作，短周期执行的web服务器模型意味着即使是烂代码也不会长时间影响。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://tyloafer.github.io/posts/63198/">
+
+
+
+
+
+  <title>PHP如何读取大文件 | TY·Loafer</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">TY·Loafer</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/63198/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">PHP如何读取大文件</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-01-24T14:04:00+08:00">
+                2018-01-24
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-04-17T11:23:46+08:00">
+                2019-04-17
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/63198/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/63198/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="起因"><a href="#起因" class="headerlink" title="起因"></a>起因</h1><p>这是偶然间看到的一篇文章，感觉收获颇丰，故转载。转载自<a href="https://www.luyuqiang.com/how-php-read-a-large-file" target="_blank" rel="noopener">芦雨强的网络日志</a></p>
+<h1 id="干货分割线"><a href="#干货分割线" class="headerlink" title="干货分割线"></a>干货分割线</h1><p>作为一个PHP开发者，我们经常需要关注内存管理。PHP引擎在我们运行脚本之后做了很好的清理工作，短周期执行的web服务器模型意味着即使是烂代码也不会长时间影响。</p>
+<a id="more"></a>
+<p>我们很少需要走出舒适的边界–比如我们尝试在一个小的VPS上为创建一个大项目运行Composer，或者当我们在小服务器上读取一个大文件。</p>
+<p>这是后续将在本教程中呈现的问题。</p>
+<p>教程代码可以在<a href="https://github.com/sitepoint-editors/sitepoint-performant-reading-of-big-files-in-php" target="_blank" rel="noopener">github</a>找到</p>
+<h1 id="衡量成功"><a href="#衡量成功" class="headerlink" title="衡量成功"></a>衡量成功</h1><p>确定我们完善代码的唯一方式是把烂代码和修正过的代码进行比较。换句话说，我们不知道它是否是解决办法，除非我们知道它帮了多少。</p>
+<p>有两个我们需要关心的指标。第一个是CPU的使用。我们想要过程快或者慢？第二个是内存的使用。脚本运行使用了多少内存？这些通常是成反比的-意味着我们可以在看CPU的使用时候，不看内存的使用，反之亦然。</p>
+<p>在一个异步程序模型中（比如多进程或者多线程的PHP应用），CPU和内存使用都需要谨慎考虑的。在传统PHP架构中，当它们中的哪个达到服务器极限的时候通常就会有问题。</p>
+<p>在PHP中测量CPU使用不切实际。如果你关注，可以考虑在Ubuntu或者MacOs中使用top命令。Windows可以考虑安装一个linux子系统，你就可以在Ubuntu上使用top。</p>
+<p>这个教程的目的是测量内存使用。我们将看到「传统」脚本中内存的使用情况，之后将会优化并且测量，最后我希望你可以做一个学习后的选择。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">//php.net文档中格式化字节的方法</span><br><span class="line">memory_get_peak_usage();</span><br><span class="line"></span><br><span class="line">function formatBytes($bytes, $precision = 2) &#123;</span><br><span class="line">    $units = array(&apos;b&apos;, &apos;kb&apos;, &apos;mb&apos;, &apos;gb&apos;, &apos;tb&apos;);</span><br><span class="line"></span><br><span class="line">    $bytes = max($bytes, 0);</span><br><span class="line">    $pow = floor(($bytes ? log($bytes) : 0) / log(1024));</span><br><span class="line">    $pow = min($pow, count($units) - 1);</span><br><span class="line"></span><br><span class="line">    $bytes /= (1 &lt;&lt; (10 * $pow));</span><br><span class="line"></span><br><span class="line">    return round($bytes, $precision) . &apos; &apos; . $units[$pow];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们将会在脚本的最后使用这个函数，因此可以在第一时间看到哪个脚本使用了更多的内存。</p>
+<h1 id="选项"><a href="#选项" class="headerlink" title="选项"></a>选项</h1><p>我们可以采取很多高效读取文件方法。但是有两种常用的场景。我们可以先读取后处理数据，然后输出处理后的数据或者执行其他操作。我们可能也想要转换一个数据流而不用获取数据。</p>
+<p>对于第一种情况，我们读取一个文件，然后每一万行创建一个独立的队列进程。我们需要至少把一万行放到在内存中，然后把他们发送到队列管理器。</p>
+<p>对于第二种情况，我们压缩一个特别大的API响应。我们不在乎它说什么，但我们需要确保它是以压缩形式备份的。</p>
+<p>两种情况下，我们都需要读取大文件，只不过一个关注数据一个不关注。让我们探索这些选项吧。。。</p>
+<h1 id="一行一行读文件"><a href="#一行一行读文件" class="headerlink" title="一行一行读文件"></a>一行一行读文件</h1><p>有很多处理文件的函数。让我们使用一个简单明了的文件读取：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">// from memory.php</span><br><span class="line"></span><br><span class="line">function formatBytes($bytes, $precision = 2) &#123;</span><br><span class="line">    $units = array(&apos;b&apos;, &apos;kb&apos;, &apos;mb&apos;, &apos;gb&apos;, &apos;tb&apos;);</span><br><span class="line"></span><br><span class="line">    $bytes = max($bytes, 0);</span><br><span class="line">    $pow = floor(($bytes ? log($bytes) : 0) / log(1024));</span><br><span class="line">    $pow = min($pow, count($units) - 1);</span><br><span class="line"></span><br><span class="line">    $bytes /= (1 &lt;&lt; (10 * $pow));</span><br><span class="line"></span><br><span class="line">    return round($bytes, $precision) . &apos; &apos; . $units[$pow];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">print formatBytes(memory_get_peak_usage());</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">// from reading-files-line-by-line-1.php</span><br><span class="line"></span><br><span class="line">function readTheFile($path) &#123;</span><br><span class="line">    $lines = [];</span><br><span class="line">    $handle = fopen($path, &apos;r&apos;);</span><br><span class="line"></span><br><span class="line">    while(!feof($handle)) &#123;</span><br><span class="line">        $lines[] = trim(fgets($handle));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    fclose($handle);</span><br><span class="line">    return $lines;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">readTheFile(&apos;shakespeare.txt&apos;);</span><br><span class="line"></span><br><span class="line">require &apos;memory.php&apos;;</span><br></pre></td></tr></table></figure>
+<p>我们正在读取一个包含莎士比亚全集的文本文件。文本文件大约5.5MB，消耗了12.8MB的内存。现在，让我们使用生成器来读取每一行：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">// from reading-files-line-by-line-2.php</span><br><span class="line"></span><br><span class="line">function readTheFile($path) &#123;</span><br><span class="line">    $handle = fopen($path, &apos;r&apos;);</span><br><span class="line"></span><br><span class="line">    while(!feof($handle)) &#123;</span><br><span class="line">        yield trim(fgets($handle));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    fclose($handle);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">readTheFile(&apos;shakespeare.txt&apos;);</span><br><span class="line"></span><br><span class="line">require &apos;memory.php&apos;;</span><br></pre></td></tr></table></figure>
+<p>这个文本文件同样大小，但是消耗了393KB的内存。这也说明不了什么，除非我们使用读取的数据做一些事。假设我们把文档以每两个空行分成小片段。就像：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">// from reading-files-line-by-line-3.php</span><br><span class="line"></span><br><span class="line">$iterator = readTheFile(&apos;shakespeare.txt&apos;);</span><br><span class="line"></span><br><span class="line">$buffer = &apos;&apos;;</span><br><span class="line"></span><br><span class="line">foreach ($iterator as $iteration) &#123;</span><br><span class="line">    preg_match(&apos;/\n&#123;3&#125;/&apos;, $buffer, $matches);</span><br><span class="line"></span><br><span class="line">    if (count($matches)) &#123;</span><br><span class="line">        print &apos;.&apos;;</span><br><span class="line">        $buffer = &apos;&apos;;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        $buffer .= $iteration . PHP_EOL;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">require &apos;memory.php&apos;;</span><br></pre></td></tr></table></figure>
+<p>猜一下我们现在用了多少内存？尽管我们把文档分割成了1216个片段，我们却只用了458KB的内存，意外吗？鉴于生成器的性质，我们内存消耗最大的是需要在循环中存储最大文本块的内存。在这种情况下，最大的块是101,985个字符。</p>
+<p>我已经写了<a href="https://www.sitepoint.com/memory-performance-boosts-with-generators-and-nikiciter/" target="_blank" rel="noopener">使用生成器的性能提升</a>和<a href="https://github.com/nikic/iter" target="_blank" rel="noopener">Nikita Popov的生成器库</a>，所以你想要了解更多就去看吧。</p>
+<p>生成器也有其他用法，但对读取大文件有很明显的性能提升。如果我们需要去处理数据，生成器也是最好的方式。</p>
+<h1 id="文件间的管道输送"><a href="#文件间的管道输送" class="headerlink" title="文件间的管道输送"></a>文件间的管道输送</h1><p>在某些情况下，我们不需要处理数据，而是把一个文件的数据传递到另一个文件。这通常被叫做管道输送（大概因为我们只看到了两头，没看到管道内。。。当然它不是透明的）。我们可以通过使用流方法获取它们。写了个从一个文件传递到另一个的脚本，方便我们可以测量内存使用：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">// from piping-files-1.php</span><br><span class="line"></span><br><span class="line">file_put_contents(</span><br><span class="line">    &apos;piping-files-1.txt&apos;, file_get_contents(&apos;shakespeare.txt&apos;)</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">require &apos;memory.php&apos;;</span><br></pre></td></tr></table></figure>
+<p>不出意外地，这个脚本使用比文件的拷贝更多的内存。这是因为它不得不读取、把文本内容放到内存中，然后写入到一个新文件。对于小文件还好。但是当我们处理一个大文件，就不妙了。。。</p>
+<p>让我们使用流的方式从一个文件传递到另一个（或者叫管道输送）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">// from piping-files-2.php</span><br><span class="line"></span><br><span class="line">$handle1 = fopen(&apos;shakespeare.txt&apos;, &apos;r&apos;);</span><br><span class="line">$handle2 = fopen(&apos;piping-files-2.txt&apos;, &apos;w&apos;);</span><br><span class="line"></span><br><span class="line">stream_copy_to_stream($handle1, $handle2);</span><br><span class="line"></span><br><span class="line">fclose($handle1);</span><br><span class="line">fclose($handle2);</span><br><span class="line"></span><br><span class="line">require &apos;memory.php&apos;;</span><br></pre></td></tr></table></figure>
+<p>这段代码很奇怪。我们打开两个文件的句柄，第一个使用读模式，第二使用写模式。然后我们从第一个复制到第二个。然后关闭两个文件的句柄。是不是惊喜到你了，内存只使用了393KB。</p>
+<p>这看起来是不是很熟悉。不就是我们使用生成器的代码一行一行读取然后存储吗？这是因为第二个变量使用fgets指定每行读取多少字节（默认-1或者直到一个新行）</p>
+<p>stream_copy_to_stream的第三个参数是完全相同的参数（具有完全相同的默认值）。stream_copy_to_stream正在读取一个流，一次一行，并将其写入另一个流。 它跳过了生成器产生值的部分，因为我们不需要使用该值。</p>
+<p>管道输送这些文本对我们来说没用，所以让我们仔细思考一下其他可能的例子。假设我们想要从CDN输出一个图像，重定向应用的路由。代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">// from piping-files-3.php</span><br><span class="line"></span><br><span class="line">file_put_contents(</span><br><span class="line">    &apos;piping-files-3.jpeg&apos;, file_get_contents(</span><br><span class="line">        &apos;https://github.com/assertchris/uploads/raw/master/rick.jpg&apos;</span><br><span class="line">    )</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">// ...or write this straight to stdout, if we don&apos;t need the memory info</span><br><span class="line"></span><br><span class="line">require &apos;memory.php&apos;;</span><br></pre></td></tr></table></figure>
+<p>我们可以使用以上代码解决一个应用的路由问题。但我们想从CDN获取而不是把文件存储在本地文件系统中。我们可能使用更优雅的（像<a href="http://docs.guzzlephp.org/en/stable/" target="_blank" rel="noopener">Guzzle</a>）替代file_get_contents，但是效果一样。</p>
+<p>图片的内存使用大约581KB。现在，我们试着使用流替代？</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">// from piping-files-4.php</span><br><span class="line"></span><br><span class="line">$handle1 = fopen(</span><br><span class="line">    &apos;https://github.com/assertchris/uploads/raw/master/rick.jpg&apos;, &apos;r&apos;</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">$handle2 = fopen(</span><br><span class="line">    &apos;piping-files-4.jpeg&apos;, &apos;w&apos;</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">// ...or write this straight to stdout, if we don&apos;t need the memory info</span><br><span class="line"></span><br><span class="line">stream_copy_to_stream($handle1, $handle2);</span><br><span class="line"></span><br><span class="line">fclose($handle1);</span><br><span class="line">fclose($handle2);</span><br><span class="line"></span><br><span class="line">require &apos;memory.php&apos;;</span><br></pre></td></tr></table></figure>
+<p>内存使用会略少（400KB），但是结果却一样。如果我们需要更多的内存信息，我们可以打印到standard output。事实上，PHP为实现这个提供了简单的方法。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">$handle1 = fopen(</span><br><span class="line">    &apos;https://github.com/assertchris/uploads/raw/master/rick.jpg&apos;, &apos;r&apos;</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">$handle2 = fopen(</span><br><span class="line">    &apos;php://stdout&apos;, &apos;w&apos;</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">stream_copy_to_stream($handle1, $handle2);</span><br><span class="line"></span><br><span class="line">fclose($handle1);</span><br><span class="line">fclose($handle2);</span><br><span class="line"></span><br><span class="line">// require &apos;memory.php&apos;;</span><br></pre></td></tr></table></figure>
+<h1 id="其他流"><a href="#其他流" class="headerlink" title="其他流"></a>其他流</h1><p>有一些其他流我们可以管道传递、读、或者写：</p>
+<ul>
+<li>php://stdin (只读)</li>
+<li>php://stderr (只写, 像 php://stdout)</li>
+<li>php://input (只读) 获取原请求体</li>
+<li>php://output (只写) 可以写到缓冲区</li>
+<li>php://memory 和 php://temp (读写)存储临时数据的地方。php://temp不同的是以文件存储，php://memory存储在内存</li>
+</ul>
+<h1 id="过滤器"><a href="#过滤器" class="headerlink" title="过滤器"></a>过滤器</h1><p>还有一个使用流的技巧叫过滤器。它们是中间步骤，提供管理流而不暴露给我们的功能。设想一下我们想要压缩莎士比亚.txt。可能会使用Zip扩展：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">// from filters-1.php</span><br><span class="line"></span><br><span class="line">$zip = new ZipArchive();</span><br><span class="line">$filename = &apos;filters-1.zip&apos;;</span><br><span class="line"></span><br><span class="line">$zip-&gt;open($filename, ZipArchive::CREATE);</span><br><span class="line">$zip-&gt;addFromString(&apos;shakespeare.txt&apos;, file_get_contents(&apos;shakespeare.txt&apos;));</span><br><span class="line">$zip-&gt;close();</span><br><span class="line"></span><br><span class="line">require &apos;memory.php&apos;;</span><br></pre></td></tr></table></figure>
+<p>整洁的代码，但是却消耗了10.75MB。我们使用过滤器改进：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">// from filters-2.php</span><br><span class="line"></span><br><span class="line">$handle1 = fopen(</span><br><span class="line">    &apos;php://filter/zlib.deflate/resource=shakespeare.txt&apos;, &apos;r&apos;</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">$handle2 = fopen(</span><br><span class="line">    &apos;filters-2.deflated&apos;, &apos;w&apos;</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">stream_copy_to_stream($handle1, $handle2);</span><br><span class="line"></span><br><span class="line">fclose($handle1);</span><br><span class="line">fclose($handle2);</span><br><span class="line"></span><br><span class="line">require &apos;memory.php&apos;;</span><br></pre></td></tr></table></figure>
+<p>可以看到使用php://filter/zlib.defalte的过滤器来压缩资源。我们可以把一个压缩后的数据管道传递到另一个文件。内存消耗896KB。</p>
+<p>我知道这不是同一个格式，或者使用zip压缩更好。但是你不得不怀疑：如果你选择不同的格式可以节省掉12倍的内存，何乐而不为呢？</p>
+<p>可以通过另一个zlib的解压缩过滤器解压文件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">// from filters-2.php</span><br><span class="line"></span><br><span class="line">file_get_contents(</span><br><span class="line">    &apos;php://filter/zlib.inflate/resource=filters-2.deflated&apos;</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<p>流已经在<a href="https://www.sitepoint.com/%EF%BB%BFunderstanding-streams-in-php/" target="_blank" rel="noopener">理解PHP中的流</a> 和 <a href="https://www.sitepoint.com/using-php-streams-effectively/" target="_blank" rel="noopener">PHP流与效率</a>中大量提及。如果你想要了解更多，点开看看。</p>
+<h1 id="自定义流"><a href="#自定义流" class="headerlink" title="自定义流"></a>自定义流</h1><p>fopen和file_get_contents有他们自己的默认设置，但是可以完全的自定义。为了方便理解，自己创建一个新的流：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">// from creating-contexts-1.php</span><br><span class="line"></span><br><span class="line">$data = join(&apos;&amp;&apos;, [</span><br><span class="line">    &apos;twitter=assertchris&apos;,</span><br><span class="line">]);</span><br><span class="line"></span><br><span class="line">$headers = join(&apos;\r\n&apos;, [</span><br><span class="line">    &apos;Content-type: application/x-www-form-urlencoded&apos;,</span><br><span class="line">    &apos;Content-length: &apos; . strlen($data),</span><br><span class="line">]);</span><br><span class="line"></span><br><span class="line">$options = [</span><br><span class="line">    &apos;http&apos; =&gt; [</span><br><span class="line">        &apos;method&apos; =&gt; &apos;POST&apos;,</span><br><span class="line">        &apos;header&apos;=&gt; $headers,</span><br><span class="line">        &apos;content&apos; =&gt; $data,</span><br><span class="line">    ],</span><br><span class="line">];</span><br><span class="line"></span><br><span class="line">$context = stream_content_create($options);</span><br><span class="line"></span><br><span class="line">$handle = fopen(&apos;https://example.com/register&apos;, &apos;r&apos;, false, $context);</span><br><span class="line">$response = stream_get_contents($handle);</span><br><span class="line"></span><br><span class="line">fclose($handle);</span><br></pre></td></tr></table></figure>
+<p>在这个例子中，我们尝试向API发出POST请求。API端是安全的，但是仍需要使用http上下文属性（用于http和http）。我们设置一些头并且打开API文件句柄。考虑到安全，我们以只读方式打开。</p>
+<p>可以自定义很多东西，所以如果你想了解更多，最好查看<a href="https://php.net/function.stream-context-create" target="_blank" rel="noopener">文档</a>。</p>
+<h1 id="自定义协议的过滤器"><a href="#自定义协议的过滤器" class="headerlink" title="自定义协议的过滤器"></a>自定义协议的过滤器</h1><p>在本文结束之前，来谈谈自定义协议。 如果你看<a href="https://php.net/manual/en/class.streamwrapper.php" target="_blank" rel="noopener">文档</a>，你可以找到一个示例类来实现：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">Protocol &#123;</span><br><span class="line">    public resource $context;</span><br><span class="line">    public construct ( void )</span><br><span class="line">    public destruct ( void )</span><br><span class="line">    public bool dir_closedir ( void )</span><br><span class="line">    public bool dir_opendir ( string $path , int $options )</span><br><span class="line">    public string dir_readdir ( void )</span><br><span class="line">    public bool dir_rewinddir ( void )</span><br><span class="line">    public bool mkdir ( string $path , int $mode , int $options )</span><br><span class="line">    public bool rename ( string $path_from , string $path_to )</span><br><span class="line">    public bool rmdir ( string $path , int $options )</span><br><span class="line">    public resource stream_cast ( int $cast_as )</span><br><span class="line">    public void stream_close ( void )</span><br><span class="line">    public bool stream_eof ( void )</span><br><span class="line">    public bool stream_flush ( void )</span><br><span class="line">    public bool stream_lock ( int $operation )</span><br><span class="line">    public bool stream_metadata ( string $path , int $option , mixed $value )</span><br><span class="line">    public bool stream_open ( string $path , string $mode , int $options ,</span><br><span class="line">        string &amp;$opened_path )</span><br><span class="line">    public string stream_read ( int $count )</span><br><span class="line">    public bool stream_seek ( int $offset , int $whence = SEEK_SET )</span><br><span class="line">    public bool stream_set_option ( int $option , int $arg1 , int $arg2 )</span><br><span class="line">    public array stream_stat ( void )</span><br><span class="line">    public int stream_tell ( void )</span><br><span class="line">    public bool stream_truncate ( int $new_size )</span><br><span class="line">    public int stream_write ( string $data )</span><br><span class="line">    public bool unlink ( string $path )</span><br><span class="line">    public array url_stat ( string $path , int $flags )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们不打算实现在教程中，因为我认为这是值得的自己完成过程。需要做很多工作，但是一旦这个工作完成，可以很容易地注册的流包装：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">if (in_array(&apos;highlight-names&apos;, stream_get_wrappers())) &#123;</span><br><span class="line">    stream_wrapper_unregister(&apos;highlight-names&apos;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">stream_wrapper_register(&apos;highlight-names&apos;, &apos;HighlightNamesProtocol&apos;);</span><br><span class="line"></span><br><span class="line">$highlighted = file_get_contents(&apos;highlight-names://story.txt&apos;);</span><br></pre></td></tr></table></figure>
+<p>类似地，可以自己创建一个自定义流过滤器。文档有一个过滤器类的例子：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Filter &#123;</span><br><span class="line">    public $filtername;</span><br><span class="line">    public $params</span><br><span class="line">    public int filter ( resource $in , resource $out , int &amp;$consumed ,</span><br><span class="line">        bool $closing )</span><br><span class="line">    public void onClose ( void )</span><br><span class="line">    public bool onCreate ( void )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>很容易注册：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$handle = fopen(&apos;story.txt&apos;, &apos;w+&apos;);</span><br><span class="line">stream_filter_append($handle, &apos;highlight-names&apos;, STREAM_FILTER_READ);</span><br></pre></td></tr></table></figure>
+<p>高亮名字过滤器需要去匹配新的过滤器类的过滤器名属性。也可以在php：//filter/highligh-names/resource=story.txt字符串中使用自定义过滤器。定义过滤器比定义协议要容易得多。 其中一个原因是协议需要处理目录操作，而过滤器只需处理每个数据块。</p>
+<p>如果你有强烈的进取心，鼓励你编写协议的过滤器。如果你可以将过滤器应用于stream_copy_to_stream操作，那么即使处理大容量的大文件，你的应用程序内存也不会超阈值。 试着编写一个调整图像大小的过滤器或加密应用程序的过滤器。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>尽管这不是我们经常处理的问题，在读取大文件时也很容易陷入困境。在异步应用中，当我们不注意内存使用时，很容易就把整个服务搞挂。</p>
+<p>这个教程希望给你讲解一些新想法（或者唤醒你的记忆），以便你能在读、写大文件时想得更多。当开始熟练掌握流和生成器后，停止使用像file_get_contents函数：一些莫名其妙问题就在程序中消失了。这就是意义所在！</p>
+<h1 id="声明"><a href="#声明" class="headerlink" title="声明"></a>声明</h1><p>本文转载自<a href="https://www.luyuqiang.com/how-php-read-a-large-file" target="_blank" rel="noopener">芦雨强的网络日志</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/PHP/" rel="tag"># PHP</a>
+          
+            <a href="/tags/优化/" rel="tag"># 优化</a>
+          
+            <a href="/tags/大文件/" rel="tag"># 大文件</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/posts/55399/" rel="next" title="file_get_contents使用SSL连接报错">
+                <i class="fa fa-chevron-left"></i> file_get_contents使用SSL连接报错
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/posts/58415/" rel="prev" title="Linux下mail发送邮件8015错误">
+                Linux下mail发送邮件8015错误 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">TY·Loafer</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">50</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">19</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">38</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#起因"><span class="nav-number">1.</span> <span class="nav-text">起因</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#干货分割线"><span class="nav-number">2.</span> <span class="nav-text">干货分割线</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#衡量成功"><span class="nav-number">3.</span> <span class="nav-text">衡量成功</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#选项"><span class="nav-number">4.</span> <span class="nav-text">选项</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#一行一行读文件"><span class="nav-number">5.</span> <span class="nav-text">一行一行读文件</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#文件间的管道输送"><span class="nav-number">6.</span> <span class="nav-text">文件间的管道输送</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#其他流"><span class="nav-number">7.</span> <span class="nav-text">其他流</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#过滤器"><span class="nav-number">8.</span> <span class="nav-text">过滤器</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#自定义流"><span class="nav-number">9.</span> <span class="nav-text">自定义流</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#自定义协议的过滤器"><span class="nav-number">10.</span> <span class="nav-text">自定义协议的过滤器</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">11.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#声明"><span class="nav-number">12.</span> <span class="nav-text">声明</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TY·Loafer</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://tyloafer.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://tyloafer.github.io/posts/63198/';
+          this.page.identifier = 'posts/63198/';
+          this.page.title = 'PHP如何读取大文件';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://tyloafer.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
