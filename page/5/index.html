@@ -498,8 +498,8 @@
               
                 <span class="post-meta-item-text">更新于&#58;</span>
               
-              <time title="更新于" itemprop="dateModified" datetime="2019-04-17T11:23:46+08:00">
-                2019-04-17
+              <time title="更新于" itemprop="dateModified" datetime="2019-04-22T10:26:46+08:00">
+                2019-04-22
               </time>
             
           </span>
@@ -904,7 +904,18 @@
       
         
           <h1 id="起因"><a href="#起因" class="headerlink" title="起因"></a>起因</h1><p>在做项目的时候，做到登录这一块，需要同时支持扫码登录及账号密码登录，整体的思路如下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">graph TD</span><br><span class="line">    st(开始)--&gt;op1(扫码登录界面)</span><br><span class="line">    st--&gt;op2(帐密登录界面)</span><br><span class="line">    op1--手机端扫码并上传扫码者信息--&gt;op3(扫码登录接口)</span><br><span class="line">    op3--返回web扫码者信息--&gt;op1</span><br><span class="line">    op1--携带返回者信息请求--&gt;op4(帐密登录接口)</span><br><span class="line">    op2--携带登录信息--&gt;op4</span><br><span class="line">    op4--yes--&gt;out1&gt;登录成功]</span><br><span class="line">    op4--no--&gt;out2&gt;登录失败]</span><br><span class="line">    out1--&gt;en(结束)</span><br><span class="line">    out2--&gt;en</span><br></pre></td></tr></table></figure>
+<pre class="mermaid">graph TD
+    st(开始)-->op1(扫码登录界面)
+    st-->op2(帐密登录界面)
+    op1--手机端扫码并上传扫码者信息-->op3(扫码登录接口)
+    op3--返回web扫码者信息-->op1
+    op1--携带返回者信息请求-->op4(帐密登录接口)
+    op2--携带登录信息-->op4
+    op4--yes-->out1>登录成功]
+    op4--no-->out2>登录失败]
+    out1-->en(结束)
+    out2-->en</pre>
+
 <p>后来发现，webLogin的接口每次调用都特别慢，打开debug后，发现webLogin都是在scanLogin接口结束后，才能开始处理，webLogin被阻塞了。</p>
           <!--noindex-->
           <div class="post-button text-center">
@@ -2020,7 +2031,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">21</span>
+                  <span class="site-state-item-count">20</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -2097,6 +2108,13 @@
 
 
 
+
+  <script src="https://unpkg.com/mermaid@7.1.2/dist/mermaid.min.js"></script>
+  <script>
+    if (window.mermaid) {
+      mermaid.initialize({theme: 'forest'});
+    }
+  </script>
 
         
 
