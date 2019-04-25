@@ -89,7 +89,7 @@
 <meta property="og:site_name" content="TY·Loafer">
 <meta property="og:description" content="GoLand编辑器虽然很强大，但是在展示内存及堆栈信息这一块还是比较的弱，有可能是我的姿势不对，所以，开始切入了gdb调试，但是gdb踩到了坑，并没有解决，也就引发了gdb与dlv的对比了">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2019-04-19T03:24:34.374Z">
+<meta property="og:updated_time" content="2019-04-25T09:08:38.923Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Go的调试工具:gdb vs dlv">
 <meta name="twitter:description" content="GoLand编辑器虽然很强大，但是在展示内存及堆栈信息这一块还是比较的弱，有可能是我的姿势不对，所以，开始切入了gdb调试，但是gdb踩到了坑，并没有解决，也就引发了gdb与dlv的对比了">
@@ -332,8 +332,8 @@
               
                 <span class="post-meta-item-text">更新于&#58;</span>
               
-              <time title="更新于" itemprop="dateModified" datetime="2019-04-19T11:24:34+08:00">
-                2019-04-19
+              <time title="更新于" itemprop="dateModified" datetime="2019-04-25T17:08:38+08:00">
+                2019-04-25
               </time>
             
           </span>
@@ -450,6 +450,8 @@
 <li><p>gdb对于局部引用变量无法调试，dlv不会</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">  i := <span class="number">10</span></span><br><span class="line">  j := &amp;i</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>如上代码，gdb 使用 <code>p j</code> 打印变量j的时候报错，dlv却可以</p>
+</li>
+<li><p>dlv无法调试interface等Go内部实现的一些结构，gdb是可以的</p>
 </li>
 </ol>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://lday.me/2017/02/27/0005_gdb-vs-dlv/" target="_blank" rel="noopener">《Golang程序调试工具介绍(gdb vs dlv)》</a></p>
@@ -582,7 +584,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">53</span>
+                  <span class="site-state-item-count">55</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -593,7 +595,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">20</span>
+                  <span class="site-state-item-count">21</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -604,7 +606,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">39</span>
+                  <span class="site-state-item-count">40</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
