@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Go,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="TY·Loafer" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="sync pool使用来存放临时变量的一个缓冲区，但是这个缓冲区并不可靠，每次gc的时候，都会首先清除缓冲区，所以，假如一个slice仅仅存放在 Pool 中，而没有其他地方引用，则会被当成垃圾清理掉。">
+<meta name="keywords" content="Go">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Sync.Pool浅析">
+<meta property="og:url" content="https://tyloafer.github.io/posts/61660/index.html">
+<meta property="og:site_name" content="TY·Loafer">
+<meta property="og:description" content="sync pool使用来存放临时变量的一个缓冲区，但是这个缓冲区并不可靠，每次gc的时候，都会首先清除缓冲区，所以，假如一个slice仅仅存放在 Pool 中，而没有其他地方引用，则会被当成垃圾清理掉。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://note-1253518569.cossh.myqcloud.com/20190519203029.png">
+<meta property="og:updated_time" content="2019-05-19T12:44:53.564Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Sync.Pool浅析">
+<meta name="twitter:description" content="sync pool使用来存放临时变量的一个缓冲区，但是这个缓冲区并不可靠，每次gc的时候，都会首先清除缓冲区，所以，假如一个slice仅仅存放在 Pool 中，而没有其他地方引用，则会被当成垃圾清理掉。">
+<meta name="twitter:image" content="http://note-1253518569.cossh.myqcloud.com/20190519203029.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://tyloafer.github.io/posts/61660/">
+
+
+
+
+
+  <title>Sync.Pool浅析 | TY·Loafer</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">TY·Loafer</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/61660/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Sync.Pool浅析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-05-19T20:45:00+08:00">
+                2019-05-19
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-05-19T20:44:53+08:00">
+                2019-05-19
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Go/" itemprop="url" rel="index">
+                    <span itemprop="name">Go</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/61660/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/61660/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>sync pool使用来存放临时变量的一个缓冲区，但是这个缓冲区并不可靠，每次gc的时候，都会首先清除缓冲区，所以，假如一个slice仅仅存放在 Pool 中，而没有其他地方引用，则会被当成垃圾清理掉。</p>
+<a id="more"></a>
+<h2 id="概念"><a href="#概念" class="headerlink" title="概念"></a>概念</h2><blockquote>
+<p>A Pool is a set of temporary objects that may be individually saved and<br>retrieved.</p>
+<p>Any item stored in the Pool may be removed automatically at any time without<br>notification. If the Pool holds the only reference when this happens, the<br>item might be deallocated.</p>
+<p>A Pool is safe for use by multiple goroutines simultaneously.</p>
+<p>Pool’s purpose is to cache allocated but unused items for later reuse,<br>relieving pressure on the garbage collector. That is, it makes it easy to<br>build efficient, thread-safe free lists. However, it is not suitable for all<br>free lists.</p>
+<p>An appropriate use of a Pool is to manage a group of temporary items<br>silently shared among and potentially reused by concurrent independent<br>clients of a package. Pool provides a way to amortize allocation overhead<br>across many clients.</p>
+<p>An example of good use of a Pool is in the fmt package, which maintains a<br>dynamically-sized store of temporary output buffers. The store scales under<br>load (when many goroutines are actively printing) and shrinks when<br>quiescent.</p>
+</blockquote>
+<h2 id="图示"><a href="#图示" class="headerlink" title="图示"></a>图示</h2><p><img src="http://note-1253518569.cossh.myqcloud.com/20190519203029.png" alt></p>
+<p>sync.pool的结构组成如上图所示，在这里可能会有两个问题</p>
+<ol>
+<li>我们实例化 Sync.Pool的时候，为什么实例化了一个LocalPool数组，怎么确定我的数据应该存储在LocalPool数组的哪个单元？</li>
+<li>PoolLocalInternal 里面的成员有private和shared，为什么要做这两种区分？</li>
+</ol>
+<h2 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h2><h3 id="Put"><a href="#Put" class="headerlink" title="Put"></a>Put</h3><h4 id="Put-1"><a href="#Put-1" class="headerlink" title="Put()"></a>Put()</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">func (p *Pool) Put(x interface&#123;&#125;) &#123;</span><br><span class="line">	if x == nil &#123;</span><br><span class="line">		return</span><br><span class="line">	&#125;</span><br><span class="line">	// race检测 先忽略这一块</span><br><span class="line">	if race.Enabled &#123;</span><br><span class="line">		if fastrand()%4 == 0 &#123;</span><br><span class="line">			// Randomly drop x on floor.</span><br><span class="line">			return</span><br><span class="line">		&#125;</span><br><span class="line">		race.ReleaseMerge(poolRaceAddr(x))</span><br><span class="line">		race.Disable()</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	// 根据自身的goroutine的id，获取对应的PoolLocal的地址，后面具体分析</span><br><span class="line">	l := p.pin()</span><br><span class="line">	// 如果private字段为空的话，首先给private字段赋值</span><br><span class="line">	if l.private == nil &#123;</span><br><span class="line">		l.private = x</span><br><span class="line">		x = nil</span><br><span class="line">	&#125;</span><br><span class="line">	runtime_procUnpin()</span><br><span class="line">	// 如果private字段, 则添加到shared字段，因为 shared字段可以被其他goroutine获取，所以这里需要加锁</span><br><span class="line">	if x != nil &#123;</span><br><span class="line">		l.Lock()</span><br><span class="line">		l.shared = append(l.shared, x)</span><br><span class="line">		l.Unlock()</span><br><span class="line">	&#125;</span><br><span class="line">	if race.Enabled &#123;</span><br><span class="line">		race.Enable()</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="pin"><a href="#pin" class="headerlink" title="pin()"></a>pin()</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">func (p *Pool) pin() *poolLocal &#123;</span><br><span class="line">   // 获取当前的Pid/P，数量由</span><br><span class="line">	pid := runtime_procPin()</span><br><span class="line">	// LocalPool的数量</span><br><span class="line">	s := atomic.LoadUintptr(&amp;p.localSize) // load-acquire</span><br><span class="line">	l := p.local                          // load-consume</span><br><span class="line">	// 如果获取到的pid比LocalPool数组的长度小，返回对应的LocalPool</span><br><span class="line">	if uintptr(pid) &lt; s &#123;</span><br><span class="line">		return indexLocal(l, pid)</span><br><span class="line">	&#125;</span><br><span class="line">	// 如果pid比LocalPool数组的长度大，进一步确认，这个函数后面讨论</span><br><span class="line">	return p.pinSlow()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>runtime_procPin()</code> 这个是获取当前运行的pid，具体实现没有查到， 但是<code>runtime_procPin()</code>返回的数值范围是由 <code>runtime.GOMAXPROCS(0)</code> 决定的。网上有篇文章可以参考一下<a href="https://juejin.im/post/5b7678f451882533110e8948" target="_blank" rel="noopener">《Golang 的 协程调度机制 与 GOMAXPROCS 性能调优》</a>，这里暂不深入</p>
+<h4 id="PinSlow"><a href="#PinSlow" class="headerlink" title="PinSlow()"></a>PinSlow()</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">func (p *Pool) pinSlow() *poolLocal &#123;</span><br><span class="line">	// Retry under the mutex.</span><br><span class="line">	// Can not lock the mutex while pinned.</span><br><span class="line">	runtime_procUnpin()</span><br><span class="line">	allPoolsMu.Lock()</span><br><span class="line">	defer allPoolsMu.Unlock()</span><br><span class="line">	pid := runtime_procPin()</span><br><span class="line">	// poolCleanup won&apos;t be called while we are pinned.</span><br><span class="line">	// 再次检查是否LocalPool是否有对应的索引，避免其他的线程造成影响</span><br><span class="line">	s := p.localSize</span><br><span class="line">	l := p.local</span><br><span class="line">	if uintptr(pid) &lt; s &#123;</span><br><span class="line">		return indexLocal(l, pid)</span><br><span class="line">	&#125;</span><br><span class="line">	// 如果local为nil，说明是新构建的Pool结构体，加紧allPools slice里面</span><br><span class="line">	if p.local == nil &#123;</span><br><span class="line">		allPools = append(allPools, p)</span><br><span class="line">	&#125;</span><br><span class="line">	// If GOMAXPROCS changes between GCs, we re-allocate the array and lose the old one.</span><br><span class="line">	// 重新获取 GOMAXPROCS，并根据这个设置PoolLocal的大小</span><br><span class="line">	size := runtime.GOMAXPROCS(0)</span><br><span class="line">	local := make([]poolLocal, size)</span><br><span class="line">	atomic.StorePointer(&amp;p.local, unsafe.Pointer(&amp;local[0])) // store-release</span><br><span class="line">	atomic.StoreUintptr(&amp;p.localSize, uintptr(size))         // store-release</span><br><span class="line">	// 找到当前goroutine对应的地址，并返回</span><br><span class="line">	return &amp;local[pid]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="Put-逻辑"><a href="#Put-逻辑" class="headerlink" title="Put 逻辑"></a>Put 逻辑</h4><p>综上，Put的基本操作逻辑就是</p>
+<ul>
+<li>获取当前执行的<code>Pid</code></li>
+<li>根据Pid，找到对应的<code>PoolLocal</code>，接着使用里面<code>PoolLocalInternal</code></li>
+<li>优先存入 <code>PoolLocalInternal</code> 的 <code>private</code>属性，其次粗如 <code>PoolLocalInternal</code> 的 <code>shared</code> 这个slice里面</li>
+</ul>
+<h3 id="Get"><a href="#Get" class="headerlink" title="Get"></a>Get</h3><h4 id="Get-1"><a href="#Get-1" class="headerlink" title="Get()"></a>Get()</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">func (p *Pool) Get() interface&#123;&#125; &#123;</span><br><span class="line">	if race.Enabled &#123;</span><br><span class="line">		race.Disable()</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	// 获取到LocalPool</span><br><span class="line">	l := p.pin()</span><br><span class="line">	</span><br><span class="line">	// 把private数据值拷贝一份，然后把private设置为nil，因为如果private有数据，把private数据返回后，要把private设置为nil，如果private没有数据，则原先就是nil，添加这一步也没有关系</span><br><span class="line">	x := l.private</span><br><span class="line">	l.private = nil</span><br><span class="line">	runtime_procUnpin()</span><br><span class="line">	// 如果private里面没有数据，则从shared里面去找</span><br><span class="line">	if x == nil &#123;</span><br><span class="line">		l.Lock()</span><br><span class="line">		last := len(l.shared) - 1</span><br><span class="line">		if last &gt;= 0 &#123;</span><br><span class="line">			x = l.shared[last]</span><br><span class="line">			l.shared = l.shared[:last]</span><br><span class="line">		&#125;</span><br><span class="line">		l.Unlock()</span><br><span class="line">		// 如果当前线程下对应的LocalPool，没有数据，则调用getSlow()，从其他的LocalPool的shared里面获取数据，后面解析 getSlow</span><br><span class="line">		if x == nil &#123;</span><br><span class="line">			x = p.getSlow()</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	if race.Enabled &#123;</span><br><span class="line">		race.Enable()</span><br><span class="line">		if x != nil &#123;</span><br><span class="line">			race.Acquire(poolRaceAddr(x))</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	// 如果 从private shared及其他的LocalPool的shared里面都获取不到数据，且注册的New函数不为空，则执行注册的New函数</span><br><span class="line">	if x == nil &amp;&amp; p.New != nil &#123;</span><br><span class="line">		x = p.New()</span><br><span class="line">	&#125;</span><br><span class="line">	return x</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="getSlow"><a href="#getSlow" class="headerlink" title="getSlow()"></a>getSlow()</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">func (p *Pool) getSlow() (x interface&#123;&#125;) &#123;</span><br><span class="line">	// See the comment in pin regarding ordering of the loads.</span><br><span class="line">	// 获取LocalPool的size</span><br><span class="line">	size := atomic.LoadUintptr(&amp;p.localSize) // load-acquire</span><br><span class="line">	local := p.local                         // load-consume</span><br><span class="line">	// Try to steal one element from other procs.</span><br><span class="line">	pid := runtime_procPin()</span><br><span class="line">	runtime_procUnpin()</span><br><span class="line">	// 便利LocalPool，获取shared里面的数据，找到就返回</span><br><span class="line">	for i := 0; i &lt; int(size); i++ &#123;</span><br><span class="line">		l := indexLocal(local, (pid+i+1)%int(size))</span><br><span class="line">		l.Lock()</span><br><span class="line">		last := len(l.shared) - 1</span><br><span class="line">		if last &gt;= 0 &#123;</span><br><span class="line">			x = l.shared[last]</span><br><span class="line">			l.shared = l.shared[:last]</span><br><span class="line">			l.Unlock()</span><br><span class="line">			break</span><br><span class="line">		&#125;</span><br><span class="line">		l.Unlock()</span><br><span class="line">	&#125;</span><br><span class="line">	return x</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过上面的逻辑可以看出，<code>shared</code> 里面的数据是会被其他的P检索到的，而 <code>private</code>里面的数据是不会的，所以在获取<code>shared</code>里面数据的时候，需要加锁</p>
+<h3 id="poolCleanup"><a href="#poolCleanup" class="headerlink" title="poolCleanup"></a>poolCleanup</h3><p>这个函数是Pool包里面提供的，用来清理Pool的，但是官方的实现略显粗暴</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">func poolCleanup() &#123;</span><br><span class="line">	// This function is called with the world stopped, at the beginning of a garbage collection.</span><br><span class="line">	// It must not allocate and probably should not call any runtime functions.</span><br><span class="line">	// Defensively zero out everything, 2 reasons:</span><br><span class="line">	// 1. To prevent false retention of whole Pools.</span><br><span class="line">	// 2. If GC happens while a goroutine works with l.shared in Put/Get,</span><br><span class="line">	//    it will retain whole Pool. So next cycle memory consumption would be doubled.</span><br><span class="line">	// 便利所有的Sync.Pool</span><br><span class="line">	for i, p := range allPools &#123;</span><br><span class="line">		allPools[i] = nil</span><br><span class="line">		// 遍历Pool里面的LocalPool，并清空里面的数据</span><br><span class="line">		for i := 0; i &lt; int(p.localSize); i++ &#123;</span><br><span class="line">			l := indexLocal(p.local, i)</span><br><span class="line">			l.private = nil</span><br><span class="line">			for j := range l.shared &#123;</span><br><span class="line">				l.shared[j] = nil</span><br><span class="line">			&#125;</span><br><span class="line">			l.shared = nil</span><br><span class="line">		&#125;</span><br><span class="line">		p.local = nil</span><br><span class="line">		p.localSize = 0</span><br><span class="line">	&#125;</span><br><span class="line">	// 清空allPools</span><br><span class="line">	allPools = []*Pool&#123;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个函数会在GC之前调用，这也就解释了官方的下面一句话</p>
+<blockquote>
+<p>Any item stored in the Pool may be removed automatically at any time without<br>notification. If the Pool holds the only reference when this happens, the<br>item might be deallocated.</p>
+</blockquote>
+<p>如果一个数据仅仅在Pool中有引用，那么就需要担心这个数据被GC清理掉</p>
+<h3 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h3><p>针对于上面提出的两个问题，做一下简单的分析</p>
+<blockquote>
+<p>我们实例化 Sync.Pool的时候，为什么实例化了一个LocalPool数组，怎么确定我的数据应该存储在LocalPool数组的哪个单元？</p>
+</blockquote>
+<p>这里的LocalPool是根据不同的pid来区分的，保证private数据的线程安全，程序运行的时候可以获取到pid，然后使用pid作为LocalPool的索引，找到对应的地址即可</p>
+<blockquote>
+<p>PoolLocalInternal 里面的成员有private和shared，为什么要做这两种区分？</p>
+</blockquote>
+<p><code>private</code> 是 P 专属的， <code>shared</code>是可以被其他的P获取到的</p>
+<h2 id="参考文档"><a href="#参考文档" class="headerlink" title="参考文档"></a>参考文档</h2><p><a href="http://www.mckee.cn/golang/pkg/syncpool" target="_blank" rel="noopener">《sync.Pool源码实现》</a><br>《Go 语言学习笔记 - 雨痕》</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Go/" rel="tag"># Go</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/posts/42393/" rel="next" title="GraphQL学习">
+                <i class="fa fa-chevron-left"></i> GraphQL学习
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/posts/44478/" rel="prev" title="OpenTSDB概述">
+                OpenTSDB概述 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">TY·Loafer</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">57</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">22</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">41</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概念"><span class="nav-number">1.</span> <span class="nav-text">概念</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#图示"><span class="nav-number">2.</span> <span class="nav-text">图示</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#源码分析"><span class="nav-number">3.</span> <span class="nav-text">源码分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Put"><span class="nav-number">3.1.</span> <span class="nav-text">Put</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Put-1"><span class="nav-number">3.1.1.</span> <span class="nav-text">Put()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#pin"><span class="nav-number">3.1.2.</span> <span class="nav-text">pin()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#PinSlow"><span class="nav-number">3.1.3.</span> <span class="nav-text">PinSlow()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Put-逻辑"><span class="nav-number">3.1.4.</span> <span class="nav-text">Put 逻辑</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Get"><span class="nav-number">3.2.</span> <span class="nav-text">Get</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Get-1"><span class="nav-number">3.2.1.</span> <span class="nav-text">Get()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#getSlow"><span class="nav-number">3.2.2.</span> <span class="nav-text">getSlow()</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#poolCleanup"><span class="nav-number">3.3.</span> <span class="nav-text">poolCleanup</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#问题分析"><span class="nav-number">3.4.</span> <span class="nav-text">问题分析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文档"><span class="nav-number">4.</span> <span class="nav-text">参考文档</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TY·Loafer</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+  <script src="https://unpkg.com/mermaid@7.1.2/dist/mermaid.min.js"></script>
+  <script>
+    if (window.mermaid) {
+      mermaid.initialize({theme: 'forest'});
+    }
+  </script>
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://tyloafer.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://tyloafer.github.io/posts/61660/';
+          this.page.identifier = 'posts/61660/';
+          this.page.title = 'Sync.Pool浅析';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://tyloafer.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
