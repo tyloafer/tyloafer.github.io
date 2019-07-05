@@ -91,7 +91,7 @@
 <meta property="og:description" content="sync pool使用来存放临时变量的一个缓冲区，但是这个缓冲区并不可靠，每次gc的时候，都会首先清除缓冲区，所以，假如一个slice仅仅存放在 Pool 中，而没有其他地方引用，则会被当成垃圾清理掉。">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="http://note-1253518569.cossh.myqcloud.com/20190519203029.png">
-<meta property="og:updated_time" content="2019-05-19T12:44:53.564Z">
+<meta property="og:updated_time" content="2019-07-05T09:10:39.171Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Sync.Pool浅析">
 <meta name="twitter:description" content="sync pool使用来存放临时变量的一个缓冲区，但是这个缓冲区并不可靠，每次gc的时候，都会首先清除缓冲区，所以，假如一个slice仅仅存放在 Pool 中，而没有其他地方引用，则会被当成垃圾清理掉。">
@@ -335,8 +335,8 @@
               
                 <span class="post-meta-item-text">更新于&#58;</span>
               
-              <time title="更新于" itemprop="dateModified" datetime="2019-05-19T20:44:53+08:00">
-                2019-05-19
+              <time title="更新于" itemprop="dateModified" datetime="2019-07-05T17:10:39+08:00">
+                2019-07-05
               </time>
             
           </span>
@@ -404,12 +404,12 @@
         <p>sync pool使用来存放临时变量的一个缓冲区，但是这个缓冲区并不可靠，每次gc的时候，都会首先清除缓冲区，所以，假如一个slice仅仅存放在 Pool 中，而没有其他地方引用，则会被当成垃圾清理掉。</p>
 <a id="more"></a>
 <h2 id="概念"><a href="#概念" class="headerlink" title="概念"></a>概念</h2><blockquote>
-<p>A Pool is a set of temporary objects that may be individually saved and<br>retrieved.</p>
-<p>Any item stored in the Pool may be removed automatically at any time without<br>notification. If the Pool holds the only reference when this happens, the<br>item might be deallocated.</p>
+<p>A Pool is a set of temporary objects that may be individually saved and retrieved.</p>
+<p>Any item stored in the Pool may be removed automatically at any time without notification. If the Pool holds the only reference when this happens, the item might be deallocated.</p>
 <p>A Pool is safe for use by multiple goroutines simultaneously.</p>
-<p>Pool’s purpose is to cache allocated but unused items for later reuse,<br>relieving pressure on the garbage collector. That is, it makes it easy to<br>build efficient, thread-safe free lists. However, it is not suitable for all<br>free lists.</p>
-<p>An appropriate use of a Pool is to manage a group of temporary items<br>silently shared among and potentially reused by concurrent independent<br>clients of a package. Pool provides a way to amortize allocation overhead<br>across many clients.</p>
-<p>An example of good use of a Pool is in the fmt package, which maintains a<br>dynamically-sized store of temporary output buffers. The store scales under<br>load (when many goroutines are actively printing) and shrinks when<br>quiescent.</p>
+<p>Pool’s purpose is to cache allocated but unused items for later reuse, relieving pressure on the garbage collector. That is, it makes it easy to build efficient, thread-safe free lists. However, it is not suitable for all free lists.</p>
+<p>An appropriate use of a Pool is to manage a group of temporary items silently shared among and potentially reused by concurrent independent clients of a package. Pool provides a way to amortize allocation overhead across many clients.</p>
+<p>An example of good use of a Pool is in the fmt package, which maintains a dynamically-sized store of temporary output buffers. The store scales under load (when many goroutines are actively printing) and shrinks when quiescent.</p>
 </blockquote>
 <h2 id="图示"><a href="#图示" class="headerlink" title="图示"></a>图示</h2><p><img src="http://note-1253518569.cossh.myqcloud.com/20190519203029.png" alt></p>
 <p>sync.pool的结构组成如上图所示，在这里可能会有两个问题</p>
@@ -477,8 +477,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/posts/42393/" rel="next" title="GraphQL学习">
-                <i class="fa fa-chevron-left"></i> GraphQL学习
+              <a href="/posts/44478/" rel="next" title="OpenTSDB概述">
+                <i class="fa fa-chevron-left"></i> OpenTSDB概述
               </a>
             
           </div>
@@ -487,8 +487,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/posts/44478/" rel="prev" title="OpenTSDB概述">
-                OpenTSDB概述 <i class="fa fa-chevron-right"></i>
+              <a href="/posts/57533/" rel="prev" title="在Vultr（centos7）上安装V2ray 更科学的上网">
+                在Vultr（centos7）上安装V2ray 更科学的上网 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -576,7 +576,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">60</span>
+                  <span class="site-state-item-count">61</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
