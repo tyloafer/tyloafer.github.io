@@ -1800,7 +1800,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/42030/">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/39337/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="TY·Loafer">
@@ -1819,7 +1819,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/posts/42030/" itemprop="url">MySQL主从配置</a></h1>
+                <a class="post-title-link" href="/posts/39337/" itemprop="url">使用binlog还原MySQL中的误操作</a></h1>
         
 
         <div class="post-meta">
@@ -1884,8 +1884,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/posts/42030/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/42030/" itemprop="commentCount"></span>
+                <a href="/posts/39337/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/39337/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -1914,11 +1914,10 @@
 
       
         
-          <p><strong>MySQL主从复制原理：</strong>master服务器将数据的改变记录二进制日志，当master上的数据发生改变时，则将其改变写入二进制日志中，salve服务器会在一定时间间隔内对master二进制日志进行探测其是否发生改变，如果发生改变，则开始一个I/OThread请求master二进制事件，同时主节点为每个I/O线程启动一个dump线程，用于向其发送二进制事件，并保存至从节点本地的中继日志中，从节点将启动SQL线程从中继日志中读取二进制日志，在本地重放，使得其数据和主节点的保持一致，最后I/OThread和SQLThread将进入睡眠状态，等待下一次被唤醒。</p>
-<p>接下来将会记录一下具体实现</p>
+          <p>在操作数据库的时候，总会有些时候那么的手贱，导致数据丢失，如果是测试环境还好，但是要是正式环境，那就删库跑路吧。其实，如果你打开的bin-log，这些操作还是可以被还原的。</p>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/posts/42030/#more" rel="contents">
+            <a class="btn" href="/posts/39337/#more" rel="contents">
               阅读全文 &raquo;
             </a>
           </div>
