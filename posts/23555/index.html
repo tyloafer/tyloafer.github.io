@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+<meta name="google-site-verification" content="aJfmwTFoP_DZ-z9B6oke2ZpCij2Ny4-bE0nbIa9bIEs">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Go,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="TY·Loafer" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="finalizer是与对象关联的一个函数，通过runtime.SetFinalizer 来设置，它在对象被GC的时候，这个finalizer会被调用，以完成对象生命中最后一程。由于finalizer的存在，导致了对象在三色标记中，不可能被标为白色对象，也就是垃圾，所以，这个对象的生命也会得以延续一个GC周期。正如defer一样，我们也可以通过 Finalizer 完成一些类似于资源释放的操作">
+<meta name="keywords" content="Go">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深入理解Go-runtime.SetFinalizer原理剖析">
+<meta property="og:url" content="https://tyloafer.github.io/posts/23555/index.html">
+<meta property="og:site_name" content="TY·Loafer">
+<meta property="og:description" content="finalizer是与对象关联的一个函数，通过runtime.SetFinalizer 来设置，它在对象被GC的时候，这个finalizer会被调用，以完成对象生命中最后一程。由于finalizer的存在，导致了对象在三色标记中，不可能被标为白色对象，也就是垃圾，所以，这个对象的生命也会得以延续一个GC周期。正如defer一样，我们也可以通过 Finalizer 完成一些类似于资源释放的操作">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-09-08T06:48:12.733Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="深入理解Go-runtime.SetFinalizer原理剖析">
+<meta name="twitter:description" content="finalizer是与对象关联的一个函数，通过runtime.SetFinalizer 来设置，它在对象被GC的时候，这个finalizer会被调用，以完成对象生命中最后一程。由于finalizer的存在，导致了对象在三色标记中，不可能被标为白色对象，也就是垃圾，所以，这个对象的生命也会得以延续一个GC周期。正如defer一样，我们也可以通过 Finalizer 完成一些类似于资源释放的操作">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://tyloafer.github.io/posts/23555/">
+
+
+
+
+
+  <title>深入理解Go-runtime.SetFinalizer原理剖析 | TY·Loafer</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">TY·Loafer</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/23555/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">深入理解Go-runtime.SetFinalizer原理剖析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-09-06T21:04:00+08:00">
+                2019-09-06
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-09-08T14:48:12+08:00">
+                2019-09-08
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Go/" itemprop="url" rel="index">
+                    <span itemprop="name">Go</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/23555/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/23555/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>finalizer是与对象关联的一个函数，通过<code>runtime.SetFinalizer</code> 来设置，它在对象被GC的时候，这个finalizer会被调用，以完成对象生命中最后一程。由于finalizer的存在，导致了对象在三色标记中，不可能被标为白色对象，也就是垃圾，所以，这个对象的生命也会得以延续一个GC周期。正如defer一样，我们也可以通过 Finalizer 完成一些类似于资源释放的操作</p>
+<a id="more"></a>
+<h1 id="结构概览"><a href="#结构概览" class="headerlink" title="结构概览"></a>结构概览</h1><h2 id="heap"><a href="#heap" class="headerlink" title="heap"></a>heap</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> mspan <span class="keyword">struct</span> &#123;</span><br><span class="line">	<span class="comment">// 当前span上所有对象的special串成链表</span></span><br><span class="line">	<span class="comment">// special中有个offset，就是数据对象在span上的offset，通过offset，将数据对象和special关联起来</span></span><br><span class="line">	specials    *special   <span class="comment">// linked list of special records sorted by offset.</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="special"><a href="#special" class="headerlink" title="special"></a>special</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> special <span class="keyword">struct</span> &#123;</span><br><span class="line">	next   *special <span class="comment">// linked list in span</span></span><br><span class="line">	<span class="comment">// 数据对象在span上的offset</span></span><br><span class="line">	offset <span class="keyword">uint16</span>   <span class="comment">// span offset of object</span></span><br><span class="line">	kind   <span class="keyword">byte</span>     <span class="comment">// kind of special</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>##specialfinalizer</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> specialfinalizer <span class="keyword">struct</span> &#123;</span><br><span class="line">	special special</span><br><span class="line">	fn      *funcval <span class="comment">// May be a heap pointer.</span></span><br><span class="line">	<span class="comment">// return的数据的大小</span></span><br><span class="line">	nret    <span class="keyword">uintptr</span></span><br><span class="line">	<span class="comment">// 第一个参数的类型</span></span><br><span class="line">	fint    *_type   <span class="comment">// May be a heap pointer, but always live.</span></span><br><span class="line">	<span class="comment">// 与finalizer关联的数据对象的指针类型</span></span><br><span class="line">	ot      *ptrtype <span class="comment">// May be a heap pointer, but always live.</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="finalizer"><a href="#finalizer" class="headerlink" title="finalizer"></a>finalizer</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> finalizer <span class="keyword">struct</span> &#123;</span><br><span class="line">	fn   *funcval       <span class="comment">// function to call (may be a heap pointer)</span></span><br><span class="line">	arg  unsafe.Pointer <span class="comment">// ptr to object (may be a heap pointer)</span></span><br><span class="line">	nret <span class="keyword">uintptr</span>        <span class="comment">// bytes of return values from fn</span></span><br><span class="line">	fint *_type         <span class="comment">// type of first argument of fn</span></span><br><span class="line">	ot   *ptrtype       <span class="comment">// type of ptr to object (may be a heap pointer)</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="全局变量"><a href="#全局变量" class="headerlink" title="全局变量"></a>全局变量</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> finlock mutex  <span class="comment">// protects the following variables</span></span><br><span class="line"><span class="comment">// 运行finalizer的g，只有一个g，不用的时候休眠，需要的时候再唤醒</span></span><br><span class="line"><span class="keyword">var</span> fing *g        <span class="comment">// goroutine that runs finalizers</span></span><br><span class="line"><span class="comment">// finalizer的全局队列，这里是已经设置的finalizer串成的链表</span></span><br><span class="line"><span class="keyword">var</span> finq *finblock <span class="comment">// list of finalizers that are to be executed</span></span><br><span class="line"><span class="comment">// 已经释放的finblock的链表，用finc缓存起来，以后需要使用的时候可以直接取走，避免再走一遍内存分配了</span></span><br><span class="line"><span class="keyword">var</span> finc *finblock <span class="comment">// cache of free blocks</span></span><br><span class="line"><span class="keyword">var</span> finptrmask [_FinBlockSize / sys.PtrSize / <span class="number">8</span>]<span class="keyword">byte</span></span><br><span class="line"><span class="keyword">var</span> fingwait <span class="keyword">bool</span>  <span class="comment">// fing的标志位，通过 fingwait和fingwake，来确定是否需要唤醒fing</span></span><br><span class="line"><span class="keyword">var</span> fingwake <span class="keyword">bool</span></span><br><span class="line"><span class="comment">// 所有的blocks串成的链表</span></span><br><span class="line"><span class="keyword">var</span> allfin *finblock <span class="comment">// list of all blocks</span></span><br></pre></td></tr></table></figure>
+<h1 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h1><h2 id="创建finalizer"><a href="#创建finalizer" class="headerlink" title="创建finalizer"></a>创建finalizer</h2><h3 id="main"><a href="#main" class="headerlink" title="main"></a>main</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="comment">// i 就是后面说的 数据对象</span></span><br><span class="line">	<span class="keyword">var</span> i = <span class="number">3</span></span><br><span class="line">	<span class="comment">// 这里的func 就是后面一直说的 finalizer</span></span><br><span class="line">	runtime.SetFinalizer(&amp;i, <span class="function"><span class="keyword">func</span><span class="params">(i *<span class="keyword">int</span>)</span></span> &#123;</span><br><span class="line">		fmt.Println(i, *i, <span class="string">"set finalizer"</span>)</span><br><span class="line">	&#125;)</span><br><span class="line">	time.Sleep(time.Second * <span class="number">5</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="SetFinalizer"><a href="#SetFinalizer" class="headerlink" title="SetFinalizer"></a>SetFinalizer</h3><p>根据 数据对象 ，生成一个special对象，并绑定到 数据对象 所在的span，串联到span.specials上，并且确保fing的存在</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">SetFinalizer</span><span class="params">(obj <span class="keyword">interface</span>&#123;&#125;, finalizer <span class="keyword">interface</span>&#123;&#125;)</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> debug.sbrk != <span class="number">0</span> &#123;</span><br><span class="line">		<span class="comment">// debug.sbrk never frees memory, so no finalizers run</span></span><br><span class="line">		<span class="comment">// (and we don't have the data structures to record them).</span></span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	e := efaceOf(&amp;obj)</span><br><span class="line">	etyp := e._type</span><br><span class="line">	<span class="comment">// ---- 省略数据校验的逻辑 ---</span></span><br><span class="line">	ot := (*ptrtype)(unsafe.Pointer(etyp))</span><br><span class="line"></span><br><span class="line">	<span class="comment">// find the containing object</span></span><br><span class="line">	<span class="comment">// 在内存中找不到分配的地址时 base==0，setFinalizer 是在内存回收的时候调用，没有分配就不会回收</span></span><br><span class="line">	base, _, _ := findObject(<span class="keyword">uintptr</span>(e.data), <span class="number">0</span>, <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">	f := efaceOf(&amp;finalizer)</span><br><span class="line">	ftyp := f._type</span><br><span class="line">	<span class="comment">// 如果 finalizer type == nil，尝试移除（没有的话，就不需要移除了）</span></span><br><span class="line">	<span class="keyword">if</span> ftyp == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="comment">// switch to system stack and remove finalizer</span></span><br><span class="line">		systemstack(<span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">			removefinalizer(e.data)</span><br><span class="line">		&#125;)</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// --- 对finalizer参数数量及类型进行校验 --</span></span><br><span class="line">	<span class="keyword">if</span> ftyp.kind&amp;kindMask != kindFunc &#123;</span><br><span class="line">		throw(<span class="string">"runtime.SetFinalizer: second argument is "</span> + ftyp.<span class="keyword">string</span>() + <span class="string">", not a function"</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	ft := (*functype)(unsafe.Pointer(ftyp))</span><br><span class="line">	<span class="keyword">if</span> ft.dotdotdot() &#123;</span><br><span class="line">		throw(<span class="string">"runtime.SetFinalizer: cannot pass "</span> + etyp.<span class="keyword">string</span>() + <span class="string">" to finalizer "</span> + ftyp.<span class="keyword">string</span>() + <span class="string">" because dotdotdot"</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> ft.inCount != <span class="number">1</span> &#123;</span><br><span class="line">		throw(<span class="string">"runtime.SetFinalizer: cannot pass "</span> + etyp.<span class="keyword">string</span>() + <span class="string">" to finalizer "</span> + ftyp.<span class="keyword">string</span>())</span><br><span class="line">	&#125;</span><br><span class="line">	fint := ft.in()[<span class="number">0</span>]</span><br><span class="line">	<span class="keyword">switch</span> &#123;</span><br><span class="line">	<span class="keyword">case</span> fint == etyp:</span><br><span class="line">		<span class="comment">// ok - same type</span></span><br><span class="line">		<span class="keyword">goto</span> okarg</span><br><span class="line">	<span class="keyword">case</span> fint.kind&amp;kindMask == kindPtr:</span><br><span class="line">		<span class="keyword">if</span> (fint.uncommon() == <span class="literal">nil</span> || etyp.uncommon() == <span class="literal">nil</span>) &amp;&amp; (*ptrtype)(unsafe.Pointer(fint)).elem == ot.elem &#123;</span><br><span class="line">			<span class="comment">// ok - not same type, but both pointers,</span></span><br><span class="line">			<span class="comment">// one or the other is unnamed, and same element type, so assignable.</span></span><br><span class="line">			<span class="keyword">goto</span> okarg</span><br><span class="line">		&#125;</span><br><span class="line">	<span class="keyword">case</span> fint.kind&amp;kindMask == kindInterface:</span><br><span class="line">		ityp := (*interfacetype)(unsafe.Pointer(fint))</span><br><span class="line">		<span class="keyword">if</span> <span class="built_in">len</span>(ityp.mhdr) == <span class="number">0</span> &#123;</span><br><span class="line">			<span class="comment">// ok - satisfies empty interface</span></span><br><span class="line">			<span class="keyword">goto</span> okarg</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> _, ok := assertE2I2(ityp, *efaceOf(&amp;obj)); ok &#123;</span><br><span class="line">			<span class="keyword">goto</span> okarg</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	throw(<span class="string">"runtime.SetFinalizer: cannot pass "</span> + etyp.<span class="keyword">string</span>() + <span class="string">" to finalizer "</span> + ftyp.<span class="keyword">string</span>())</span><br><span class="line">okarg:</span><br><span class="line">	<span class="comment">// compute size needed for return parameters</span></span><br><span class="line">	<span class="comment">// 计算返回参数的大小并进行对齐</span></span><br><span class="line">	nret := <span class="keyword">uintptr</span>(<span class="number">0</span>)</span><br><span class="line">	<span class="keyword">for</span> _, t := <span class="keyword">range</span> ft.out() &#123;</span><br><span class="line">		nret = round(nret, <span class="keyword">uintptr</span>(t.align)) + <span class="keyword">uintptr</span>(t.size)</span><br><span class="line">	&#125;</span><br><span class="line">	nret = round(nret, sys.PtrSize)</span><br><span class="line"></span><br><span class="line">	<span class="comment">// make sure we have a finalizer goroutine</span></span><br><span class="line">	<span class="comment">// 确保 finalizer 有一个 goroutine</span></span><br><span class="line">	createfing()</span><br><span class="line"></span><br><span class="line">	systemstack(<span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="comment">// 却换到g0，添加finalizer，并且不能重复设置</span></span><br><span class="line">		<span class="keyword">if</span> !addfinalizer(e.data, (*funcval)(f.data), nret, fint, ot) &#123;</span><br><span class="line">			throw(<span class="string">"runtime.SetFinalizer: finalizer already set"</span>)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里逻辑没什么复杂的，只是在参数、类型的判断等上面，比较的麻烦</p>
+<h3 id="removefinalizer"><a href="#removefinalizer" class="headerlink" title="removefinalizer"></a>removefinalizer</h3><p>通过removespecial，找到数据对象p所对应的special对象，如果找到的话，释放mheap上对应的内存</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">removefinalizer</span><span class="params">(p unsafe.Pointer)</span></span> &#123;</span><br><span class="line">	<span class="comment">// 根据数据p找到对应的special对象</span></span><br><span class="line">	s := (*specialfinalizer)(unsafe.Pointer(removespecial(p, _KindSpecialFinalizer)))</span><br><span class="line">	<span class="keyword">if</span> s == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="comment">// there wasn't a finalizer to remove</span></span><br><span class="line">	&#125;</span><br><span class="line">	lock(&amp;mheap_.speciallock)</span><br><span class="line">	<span class="comment">// 释放找到的special所对应的内存</span></span><br><span class="line">	mheap_.specialfinalizeralloc.free(unsafe.Pointer(s))</span><br><span class="line">	unlock(&amp;mheap_.speciallock)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里的函数，虽然叫removefinalizer， 但是这里暂时跟finalizer结构体没有关系，都是在跟special结构体打交道，后面的addfinalizer也是一样的</p>
+<h3 id="removespecial"><a href="#removespecial" class="headerlink" title="removespecial"></a>removespecial</h3><p>遍历数据所在的span的specials，如果找到了指定数据p的special的话，就从specials中移除，并返回</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">removespecial</span><span class="params">(p unsafe.Pointer, kind <span class="keyword">uint8</span>)</span> *<span class="title">special</span></span> &#123;</span><br><span class="line">	<span class="comment">// 找到数据p所在的span</span></span><br><span class="line">	span := spanOfHeap(<span class="keyword">uintptr</span>(p))</span><br><span class="line">	<span class="keyword">if</span> span == <span class="literal">nil</span> &#123;</span><br><span class="line">		throw(<span class="string">"removespecial on invalid pointer"</span>)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Ensure that the span is swept.</span></span><br><span class="line">	<span class="comment">// Sweeping accesses the specials list w/o locks, so we have</span></span><br><span class="line">	<span class="comment">// to synchronize with it. And it's just much safer.</span></span><br><span class="line">	mp := acquirem()</span><br><span class="line">	<span class="comment">// 保证span被清扫过了</span></span><br><span class="line">	span.ensureSwept()</span><br><span class="line">	<span class="comment">// 获取数据p的偏移量，根据偏移量去寻找p对应的special</span></span><br><span class="line">	offset := <span class="keyword">uintptr</span>(p) - span.base()</span><br><span class="line"></span><br><span class="line">	lock(&amp;span.speciallock)</span><br><span class="line">	t := &amp;span.specials</span><br><span class="line">	<span class="comment">// 遍历span.specials这个链表</span></span><br><span class="line">	<span class="keyword">for</span> &#123;</span><br><span class="line">		s := *t</span><br><span class="line">		<span class="keyword">if</span> s == <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">break</span></span><br><span class="line">		&#125;</span><br><span class="line">		<span class="comment">// This function is used for finalizers only, so we don't check for</span></span><br><span class="line">		<span class="comment">// "interior" specials (p must be exactly equal to s-&gt;offset).</span></span><br><span class="line">		<span class="keyword">if</span> offset == <span class="keyword">uintptr</span>(s.offset) &amp;&amp; kind == s.kind &#123;</span><br><span class="line">			<span class="comment">// 找到了，修改指针，将当前找到的special移除</span></span><br><span class="line">			*t = s.next</span><br><span class="line">			unlock(&amp;span.speciallock)</span><br><span class="line">			releasem(mp)</span><br><span class="line">			<span class="keyword">return</span> s</span><br><span class="line">		&#125;</span><br><span class="line">		t = &amp;s.next</span><br><span class="line">	&#125;</span><br><span class="line">	unlock(&amp;span.speciallock)</span><br><span class="line">	releasem(mp)</span><br><span class="line">	<span class="comment">// 没有找到，就返回nil</span></span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="addfinalizer"><a href="#addfinalizer" class="headerlink" title="addfinalizer"></a>addfinalizer</h3><p>正好跟removefinalizer相反，这个就是根据数据对象p，创建对应的special，然后添加到span.specials链表上面</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">addfinalizer</span><span class="params">(p unsafe.Pointer, f *funcval, nret <span class="keyword">uintptr</span>, fint *_type, ot *ptrtype)</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">	lock(&amp;mheap_.speciallock)</span><br><span class="line">	<span class="comment">// 分配出来一块内存供finalizer使用</span></span><br><span class="line">	s := (*specialfinalizer)(mheap_.specialfinalizeralloc.alloc())</span><br><span class="line">	unlock(&amp;mheap_.speciallock)</span><br><span class="line">	s.special.kind = _KindSpecialFinalizer</span><br><span class="line">	s.fn = f</span><br><span class="line">	s.nret = nret</span><br><span class="line">	s.fint = fint</span><br><span class="line">	s.ot = ot</span><br><span class="line">	<span class="keyword">if</span> addspecial(p, &amp;s.special) &#123;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// There was an old finalizer</span></span><br><span class="line">	<span class="comment">// 没有添加成功，是因为p已经有了一个special对象了</span></span><br><span class="line">	lock(&amp;mheap_.speciallock)</span><br><span class="line">	mheap_.specialfinalizeralloc.free(unsafe.Pointer(s))</span><br><span class="line">	unlock(&amp;mheap_.speciallock)</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">false</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="addspecial"><a href="#addspecial" class="headerlink" title="addspecial"></a>addspecial</h3><p>这里是添加special的主逻辑</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">addspecial</span><span class="params">(p unsafe.Pointer, s *special)</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">	span := spanOfHeap(<span class="keyword">uintptr</span>(p))</span><br><span class="line">	<span class="keyword">if</span> span == <span class="literal">nil</span> &#123;</span><br><span class="line">		throw(<span class="string">"addspecial on invalid pointer"</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 同 removerspecial一样，确保这个span已经清扫过了</span></span><br><span class="line">	mp := acquirem()</span><br><span class="line">	span.ensureSwept()</span><br><span class="line"></span><br><span class="line">	offset := <span class="keyword">uintptr</span>(p) - span.base()</span><br><span class="line">	kind := s.kind</span><br><span class="line"></span><br><span class="line">	lock(&amp;span.speciallock)</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Find splice point, check for existing record.</span></span><br><span class="line">	t := &amp;span.specials</span><br><span class="line">	<span class="keyword">for</span> &#123;</span><br><span class="line">		x := *t</span><br><span class="line">		<span class="keyword">if</span> x == <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">break</span></span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> offset == <span class="keyword">uintptr</span>(x.offset) &amp;&amp; kind == x.kind &#123;</span><br><span class="line">			<span class="comment">// 已经存在了，不能在增加了，一个数据对象，只能绑定一个finalizer</span></span><br><span class="line">			unlock(&amp;span.speciallock)</span><br><span class="line">			releasem(mp)</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">false</span> <span class="comment">// already exists</span></span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> offset &lt; <span class="keyword">uintptr</span>(x.offset) || (offset == <span class="keyword">uintptr</span>(x.offset) &amp;&amp; kind &lt; x.kind) &#123;</span><br><span class="line">			<span class="keyword">break</span></span><br><span class="line">		&#125;</span><br><span class="line">		t = &amp;x.next</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Splice in record, fill in offset.</span></span><br><span class="line">	<span class="comment">// 添加到 specials 队列尾</span></span><br><span class="line">	s.offset = <span class="keyword">uint16</span>(offset)</span><br><span class="line">	s.next = *t</span><br><span class="line">	*t = s</span><br><span class="line">	unlock(&amp;span.speciallock)</span><br><span class="line">	releasem(mp)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="literal">true</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="createfing"><a href="#createfing" class="headerlink" title="createfing"></a>createfing</h3><p>这个函数是保证，创建了finalizer之后，有一个goroutine去运行，这里只运行一次，这个goroutine会由全局变量 fing 记录</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">createfing</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="comment">// start the finalizer goroutine exactly once</span></span><br><span class="line">	<span class="comment">// 进创建一个goroutine，进行时刻监控运行</span></span><br><span class="line">	<span class="keyword">if</span> fingCreate == <span class="number">0</span> &amp;&amp; atomic.Cas(&amp;fingCreate, <span class="number">0</span>, <span class="number">1</span>) &#123;</span><br><span class="line">		<span class="comment">// 开启一个goroutine运行</span></span><br><span class="line">		<span class="keyword">go</span> runfinq()</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="执行finalizer"><a href="#执行finalizer" class="headerlink" title="执行finalizer"></a>执行finalizer</h2><p>在上面的 <code>createfing</code> 的会尝试创建一个goroutine去执行，接下来就分析一下执行流程吧</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">runfinq</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> (</span><br><span class="line">		frame    unsafe.Pointer</span><br><span class="line">		framecap <span class="keyword">uintptr</span></span><br><span class="line">	)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> &#123;</span><br><span class="line">		lock(&amp;finlock)</span><br><span class="line">		<span class="comment">// 获取finq 全局队列，并清空全局队列</span></span><br><span class="line">		fb := finq</span><br><span class="line">		finq = <span class="literal">nil</span></span><br><span class="line">		<span class="keyword">if</span> fb == <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="comment">// 如果全局队列为空，休眠当前g，等待被唤醒</span></span><br><span class="line">			gp := getg()</span><br><span class="line">			fing = gp</span><br><span class="line">			<span class="comment">// 设置fing的状态标志位</span></span><br><span class="line">			fingwait = <span class="literal">true</span></span><br><span class="line">			goparkunlock(&amp;finlock, waitReasonFinalizerWait, traceEvGoBlock, <span class="number">1</span>)</span><br><span class="line">			<span class="keyword">continue</span></span><br><span class="line">		&#125;</span><br><span class="line">		unlock(&amp;finlock)</span><br><span class="line">		<span class="comment">// 循环执行runq链表里的fin数组</span></span><br><span class="line">		<span class="keyword">for</span> fb != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">for</span> i := fb.cnt; i &gt; <span class="number">0</span>; i-- &#123;</span><br><span class="line">				f := &amp;fb.fin[i<span class="number">-1</span>]</span><br><span class="line">				<span class="comment">// 获取存储当前finalizer的返回数据的大小，如果比之前大，则分配</span></span><br><span class="line">				framesz := unsafe.Sizeof((<span class="keyword">interface</span>&#123;&#125;)(<span class="literal">nil</span>)) + f.nret</span><br><span class="line">				<span class="keyword">if</span> framecap &lt; framesz &#123;</span><br><span class="line">					<span class="comment">// The frame does not contain pointers interesting for GC,</span></span><br><span class="line">					<span class="comment">// all not yet finalized objects are stored in finq.</span></span><br><span class="line">					<span class="comment">// If we do not mark it as FlagNoScan,</span></span><br><span class="line">					<span class="comment">// the last finalized object is not collected.</span></span><br><span class="line">					frame = mallocgc(framesz, <span class="literal">nil</span>, <span class="literal">true</span>)</span><br><span class="line">					framecap = framesz</span><br><span class="line">				&#125;</span><br><span class="line"></span><br><span class="line">				<span class="keyword">if</span> f.fint == <span class="literal">nil</span> &#123;</span><br><span class="line">					throw(<span class="string">"missing type in runfinq"</span>)</span><br><span class="line">				&#125;</span><br><span class="line">				<span class="comment">// frame is effectively uninitialized</span></span><br><span class="line">				<span class="comment">// memory. That means we have to clear</span></span><br><span class="line">				<span class="comment">// it before writing to it to avoid</span></span><br><span class="line">				<span class="comment">// confusing the write barrier.</span></span><br><span class="line">				<span class="comment">// 清空frame内存存储</span></span><br><span class="line">				*(*[<span class="number">2</span>]<span class="keyword">uintptr</span>)(frame) = [<span class="number">2</span>]<span class="keyword">uintptr</span>&#123;&#125;</span><br><span class="line">				<span class="keyword">switch</span> f.fint.kind &amp; kindMask &#123;</span><br><span class="line">				<span class="keyword">case</span> kindPtr:</span><br><span class="line">					<span class="comment">// direct use of pointer</span></span><br><span class="line">					*(*unsafe.Pointer)(frame) = f.arg</span><br><span class="line">				<span class="keyword">case</span> kindInterface:</span><br><span class="line">					ityp := (*interfacetype)(unsafe.Pointer(f.fint))</span><br><span class="line">					<span class="comment">// set up with empty interface</span></span><br><span class="line">					(*eface)(frame)._type = &amp;f.ot.typ</span><br><span class="line">					(*eface)(frame).data = f.arg</span><br><span class="line">					<span class="keyword">if</span> <span class="built_in">len</span>(ityp.mhdr) != <span class="number">0</span> &#123;</span><br><span class="line">						<span class="comment">// convert to interface with methods</span></span><br><span class="line">						<span class="comment">// this conversion is guaranteed to succeed - we checked in SetFinalizer</span></span><br><span class="line">						*(*iface)(frame) = assertE2I(ityp, *(*eface)(frame))</span><br><span class="line">					&#125;</span><br><span class="line">				<span class="keyword">default</span>:</span><br><span class="line">					throw(<span class="string">"bad kind in runfinq"</span>)</span><br><span class="line">				&#125;</span><br><span class="line">				<span class="comment">// 调用finalizer函数</span></span><br><span class="line">				fingRunning = <span class="literal">true</span></span><br><span class="line">				reflectcall(<span class="literal">nil</span>, unsafe.Pointer(f.fn), frame, <span class="keyword">uint32</span>(framesz), <span class="keyword">uint32</span>(framesz))</span><br><span class="line">				fingRunning = <span class="literal">false</span></span><br><span class="line"></span><br><span class="line">				<span class="comment">// Drop finalizer queue heap references</span></span><br><span class="line">				<span class="comment">// before hiding them from markroot.</span></span><br><span class="line">				<span class="comment">// This also ensures these will be</span></span><br><span class="line">				<span class="comment">// clear if we reuse the finalizer.</span></span><br><span class="line">				<span class="comment">// 清空finalizer的属性</span></span><br><span class="line">				f.fn = <span class="literal">nil</span></span><br><span class="line">				f.arg = <span class="literal">nil</span></span><br><span class="line">				f.ot = <span class="literal">nil</span></span><br><span class="line">				atomic.Store(&amp;fb.cnt, i<span class="number">-1</span>)</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="comment">// 将已经完成的finalizer放入finc以作缓存，避免再次分配内存</span></span><br><span class="line">			next := fb.next</span><br><span class="line">			lock(&amp;finlock)</span><br><span class="line">			fb.next = finc</span><br><span class="line">			finc = fb</span><br><span class="line">			unlock(&amp;finlock)</span><br><span class="line">			fb = next</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>看完上面的流程的时候，突然发现有点懵逼</p>
+<ol>
+<li>全局队列finq中是什么时候被插入数据 finalizer的？</li>
+<li>g如果休眠了，那怎么被唤醒呢？</li>
+</ol>
+<p>先针对第一个问题分析：</p>
+<p>插入队列的操作，要追溯到我们之前分析的GC  <a href="https://segmentfault.com/a/1190000020086769" target="_blank" rel="noopener">深入理解Go-垃圾回收机制</a> 了，在<code>sweep</code> 中有下面一段函数</p>
+<h3 id="sweep"><a href="#sweep" class="headerlink" title="sweep"></a>sweep</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *mspan)</span> <span class="title">sweep</span><span class="params">(preserve <span class="keyword">bool</span>)</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">	....</span><br><span class="line">	specialp := &amp;s.specials</span><br><span class="line">	special := *specialp</span><br><span class="line">	<span class="keyword">for</span> special != <span class="literal">nil</span> &#123;</span><br><span class="line">		....</span><br><span class="line">		<span class="keyword">if</span> special.kind == _KindSpecialFinalizer || !hasFin &#123;</span><br><span class="line">			<span class="comment">// Splice out special record.</span></span><br><span class="line">			y := special</span><br><span class="line">			special = special.next</span><br><span class="line">			*specialp = special</span><br><span class="line">			<span class="comment">// 加入全局finq队列的入口就在这里了</span></span><br><span class="line">			freespecial(y, unsafe.Pointer(p), size)</span><br><span class="line">		&#125;</span><br><span class="line">		....</span><br><span class="line">	&#125;</span><br><span class="line">	....</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="freespecial"><a href="#freespecial" class="headerlink" title="freespecial"></a>freespecial</h3><p>在gc的时候，不仅要把special对应的内存释放掉，而且把specials整理创建对应dinalizer对象，并插入到 finq队列里面</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">freespecial</span><span class="params">(s *special, p unsafe.Pointer, size <span class="keyword">uintptr</span>)</span></span> &#123;</span><br><span class="line">	<span class="keyword">switch</span> s.kind &#123;</span><br><span class="line">	<span class="keyword">case</span> _KindSpecialFinalizer:</span><br><span class="line">		<span class="comment">// 把这个finalizer加入到全局队列</span></span><br><span class="line">		sf := (*specialfinalizer)(unsafe.Pointer(s))</span><br><span class="line">		queuefinalizer(p, sf.fn, sf.nret, sf.fint, sf.ot)</span><br><span class="line">		lock(&amp;mheap_.speciallock)</span><br><span class="line">		mheap_.specialfinalizeralloc.free(unsafe.Pointer(sf))</span><br><span class="line">		unlock(&amp;mheap_.speciallock)</span><br><span class="line">	<span class="comment">// 下面两种情况不在分析范围内，省略</span></span><br><span class="line">	<span class="keyword">case</span> _KindSpecialProfile:</span><br><span class="line">		sp := (*specialprofile)(unsafe.Pointer(s))</span><br><span class="line">		mProf_Free(sp.b, size)</span><br><span class="line">		lock(&amp;mheap_.speciallock)</span><br><span class="line">		mheap_.specialprofilealloc.free(unsafe.Pointer(sp))</span><br><span class="line">		unlock(&amp;mheap_.speciallock)</span><br><span class="line">	<span class="keyword">default</span>:</span><br><span class="line">		throw(<span class="string">"bad special kind"</span>)</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">"not reached"</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="queuefinalizer"><a href="#queuefinalizer" class="headerlink" title="queuefinalizer"></a>queuefinalizer</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">queuefinalizer</span><span class="params">(p unsafe.Pointer, fn *funcval, nret <span class="keyword">uintptr</span>, fint *_type, ot *ptrtype)</span></span> &#123;</span><br><span class="line">	lock(&amp;finlock)</span><br><span class="line">	<span class="comment">// 如果finq为空或finq的内部数组已经满了，则从finc或重新分配 来获取block并插入到finq的链表头</span></span><br><span class="line">	<span class="keyword">if</span> finq == <span class="literal">nil</span> || finq.cnt == <span class="keyword">uint32</span>(<span class="built_in">len</span>(finq.fin)) &#123;</span><br><span class="line">		<span class="keyword">if</span> finc == <span class="literal">nil</span> &#123;</span><br><span class="line">			finc = (*finblock)(persistentalloc(_FinBlockSize, <span class="number">0</span>, &amp;memstats.gc_sys))</span><br><span class="line">			finc.alllink = allfin</span><br><span class="line">			allfin = finc</span><br><span class="line">			<span class="keyword">if</span> finptrmask[<span class="number">0</span>] == <span class="number">0</span> &#123;</span><br><span class="line">				<span class="comment">// Build pointer mask for Finalizer array in block.</span></span><br><span class="line">				<span class="comment">// Check assumptions made in finalizer1 array above.</span></span><br><span class="line">				<span class="keyword">if</span> (unsafe.Sizeof(finalizer&#123;&#125;) != <span class="number">5</span>*sys.PtrSize ||</span><br><span class="line">					unsafe.Offsetof(finalizer&#123;&#125;.fn) != <span class="number">0</span> ||</span><br><span class="line">					unsafe.Offsetof(finalizer&#123;&#125;.arg) != sys.PtrSize ||</span><br><span class="line">					unsafe.Offsetof(finalizer&#123;&#125;.nret) != <span class="number">2</span>*sys.PtrSize ||</span><br><span class="line">					unsafe.Offsetof(finalizer&#123;&#125;.fint) != <span class="number">3</span>*sys.PtrSize ||</span><br><span class="line">					unsafe.Offsetof(finalizer&#123;&#125;.ot) != <span class="number">4</span>*sys.PtrSize) &#123;</span><br><span class="line">					throw(<span class="string">"finalizer out of sync"</span>)</span><br><span class="line">				&#125;</span><br><span class="line">				<span class="keyword">for</span> i := <span class="keyword">range</span> finptrmask &#123;</span><br><span class="line">					finptrmask[i] = finalizer1[i%<span class="built_in">len</span>(finalizer1)]</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="comment">// 从finc中移除并获取链表头</span></span><br><span class="line">		block := finc</span><br><span class="line">		finc = block.next</span><br><span class="line">		<span class="comment">// 将从finc获取到的链表挂载到finq的队列头，finq指向新的block</span></span><br><span class="line">		block.next = finq</span><br><span class="line">		finq = block</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 根据finq.cnt获取索引对应的block</span></span><br><span class="line">	f := &amp;finq.fin[finq.cnt]</span><br><span class="line">	atomic.Xadd(&amp;finq.cnt, +<span class="number">1</span>) <span class="comment">// Sync with markroots</span></span><br><span class="line">	<span class="comment">// 设置相关属性</span></span><br><span class="line">	f.fn = fn</span><br><span class="line">	f.nret = nret</span><br><span class="line">	f.fint = fint</span><br><span class="line">	f.ot = ot</span><br><span class="line">	f.arg = p</span><br><span class="line">	<span class="comment">// 设置唤醒标志</span></span><br><span class="line">	fingwake = <span class="literal">true</span></span><br><span class="line">	unlock(&amp;finlock)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>至此，也就明白了，runq全局队列是怎么被填充的了</p>
+<p>那么，第二个问题，当fing被休眠后，怎么被唤醒呢？</p>
+<p>这里就需要追溯到，<a href="https://segmentfault.com/a/1190000020254937" target="_blank" rel="noopener">深入理解Go-goroutine的实现及Scheduler分析</a> 这篇文章了</p>
+<h3 id="findrunnable"><a href="#findrunnable" class="headerlink" title="findrunnable"></a>findrunnable</h3><p>在 findrunnable 中有一段代码如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">findrunnable</span><span class="params">()</span> <span class="params">(gp *g, inheritTime <span class="keyword">bool</span>)</span></span> &#123;</span><br><span class="line">	<span class="comment">// 通过状态位判断是否需要唤醒 fing， 通过wakefing来判断并返回fing</span></span><br><span class="line">	<span class="keyword">if</span> fingwait &amp;&amp; fingwake &#123;</span><br><span class="line">		<span class="keyword">if</span> gp := wakefing(); gp != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="comment">// 唤醒g，并从休眠出继续执行</span></span><br><span class="line">			ready(gp, <span class="number">0</span>, <span class="literal">true</span>)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="wakefing"><a href="#wakefing" class="headerlink" title="wakefing"></a>wakefing</h3><p>这里不仅会对状态位 fingwait fingwake做二次判断，而且，如果状态位符合唤醒要求的话，需要重置两个状态位</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">wakefing</span><span class="params">()</span> *<span class="title">g</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> res *g</span><br><span class="line">	lock(&amp;finlock)</span><br><span class="line">	<span class="keyword">if</span> fingwait &amp;&amp; fingwake &#123;</span><br><span class="line">		fingwait = <span class="literal">false</span></span><br><span class="line">		fingwake = <span class="literal">false</span></span><br><span class="line">		res = fing</span><br><span class="line">	&#125;</span><br><span class="line">	unlock(&amp;finlock)</span><br><span class="line">	<span class="keyword">return</span> res</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="参考文档"><a href="#参考文档" class="headerlink" title="参考文档"></a>参考文档</h1><ul>
+<li>《Go语言学习笔记》–雨痕</li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Go/" rel="tag"># Go</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/posts/54038/" rel="next" title="深入理解Go-defer的原理剖析">
+                <i class="fa fa-chevron-left"></i> 深入理解Go-defer的原理剖析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/posts/29628/" rel="prev" title="深入理解Go-sync.Map原理">
+                深入理解Go-sync.Map原理 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">TY·Loafer</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">70</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">24</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">43</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#结构概览"><span class="nav-number">1.</span> <span class="nav-text">结构概览</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#heap"><span class="nav-number">1.1.</span> <span class="nav-text">heap</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#special"><span class="nav-number">1.2.</span> <span class="nav-text">special</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#finalizer"><span class="nav-number">1.3.</span> <span class="nav-text">finalizer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#全局变量"><span class="nav-number">1.4.</span> <span class="nav-text">全局变量</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#源码分析"><span class="nav-number">2.</span> <span class="nav-text">源码分析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#创建finalizer"><span class="nav-number">2.1.</span> <span class="nav-text">创建finalizer</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#main"><span class="nav-number">2.1.1.</span> <span class="nav-text">main</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SetFinalizer"><span class="nav-number">2.1.2.</span> <span class="nav-text">SetFinalizer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#removefinalizer"><span class="nav-number">2.1.3.</span> <span class="nav-text">removefinalizer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#removespecial"><span class="nav-number">2.1.4.</span> <span class="nav-text">removespecial</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#addfinalizer"><span class="nav-number">2.1.5.</span> <span class="nav-text">addfinalizer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#addspecial"><span class="nav-number">2.1.6.</span> <span class="nav-text">addspecial</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#createfing"><span class="nav-number">2.1.7.</span> <span class="nav-text">createfing</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#执行finalizer"><span class="nav-number">2.2.</span> <span class="nav-text">执行finalizer</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#sweep"><span class="nav-number">2.2.1.</span> <span class="nav-text">sweep</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#freespecial"><span class="nav-number">2.2.2.</span> <span class="nav-text">freespecial</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#queuefinalizer"><span class="nav-number">2.2.3.</span> <span class="nav-text">queuefinalizer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#findrunnable"><span class="nav-number">2.2.4.</span> <span class="nav-text">findrunnable</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#wakefing"><span class="nav-number">2.2.5.</span> <span class="nav-text">wakefing</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文档"><span class="nav-number">3.</span> <span class="nav-text">参考文档</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TY·Loafer</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+  <script src="https://unpkg.com/mermaid@7.1.2/dist/mermaid.min.js"></script>
+  <script>
+    if (window.mermaid) {
+      mermaid.initialize({theme: 'forest'});
+    }
+  </script>
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://tyloafer.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://tyloafer.github.io/posts/23555/';
+          this.page.identifier = 'posts/23555/';
+          this.page.title = '深入理解Go-runtime.SetFinalizer原理剖析';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://tyloafer.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

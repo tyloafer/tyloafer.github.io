@@ -284,6 +284,347 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/29628/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/posts/29628/" itemprop="url">深入理解Go-sync.Map原理</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-09-08T21:04:00+08:00">
+                2019-09-08
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-09-08T18:20:03+08:00">
+                2019-09-08
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Go/" itemprop="url" rel="index">
+                    <span itemprop="name">Go</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/29628/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/29628/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <blockquote>
+<p> Map is like a Go map[interface{}]interface{} but is safe for concurrent use</p>
+<p> by multiple goroutines without additional locking or coordination.</p>
+<p> Loads, stores, and deletes run in amortized constant time.</p>
+</blockquote>
+<p>上面一段是官方对<code>sync.Map</code> 的描述，从描述中看，<code>sync.Map</code> 跟<code>map</code> 很像，<code>sync.Map</code> 的底层实现也是依靠了<code>map</code>，但是<code>sync.Map</code> 相对于 <code>map</code> 来说，是并发安全的。</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/posts/29628/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/23555/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/posts/23555/" itemprop="url">深入理解Go-runtime.SetFinalizer原理剖析</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-09-06T21:04:00+08:00">
+                2019-09-06
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-09-08T14:48:12+08:00">
+                2019-09-08
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Go/" itemprop="url" rel="index">
+                    <span itemprop="name">Go</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/23555/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/23555/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>finalizer是与对象关联的一个函数，通过<code>runtime.SetFinalizer</code> 来设置，它在对象被GC的时候，这个finalizer会被调用，以完成对象生命中最后一程。由于finalizer的存在，导致了对象在三色标记中，不可能被标为白色对象，也就是垃圾，所以，这个对象的生命也会得以延续一个GC周期。正如defer一样，我们也可以通过 Finalizer 完成一些类似于资源释放的操作</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/posts/23555/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/54038/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -331,7 +672,7 @@
               
                 <span class="post-meta-item-text">更新于&#58;</span>
               
-              <time title="更新于" itemprop="dateModified" datetime="2019-09-06T11:16:33+08:00">
+              <time title="更新于" itemprop="dateModified" datetime="2019-09-06T11:28:39+08:00">
                 2019-09-06
               </time>
             
@@ -398,82 +739,14 @@
 
       
         
-          
-            <p><code>Defer</code> 也是Go里面比较特别的一个关键字了，主要就是用来保证在程序执行过程中，defer后面的函数都会被执行到，一般用来关闭连接、清理资源等。</p>
-<h1 id="结构概览"><a href="#结构概览" class="headerlink" title="结构概览"></a>结构概览</h1><h2 id="defer"><a href="#defer" class="headerlink" title="defer"></a>defer</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> _defer <span class="keyword">struct</span> &#123;</span><br><span class="line">   siz     <span class="keyword">int32</span>   <span class="comment">// 参数的大小</span></span><br><span class="line">   started <span class="keyword">bool</span>    <span class="comment">// 是否执行过了</span></span><br><span class="line">   sp      <span class="keyword">uintptr</span> <span class="comment">// sp at time of defer</span></span><br><span class="line">   pc      <span class="keyword">uintptr</span></span><br><span class="line">   fn      *funcval </span><br><span class="line">   _panic  *_panic <span class="comment">// defer中的panic</span></span><br><span class="line">   link    *_defer <span class="comment">// defer链表，函数执行流程中的defer，会通过 link这个 属性进行串联</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="panic"><a href="#panic" class="headerlink" title="panic"></a>panic</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> _panic <span class="keyword">struct</span> &#123;</span><br><span class="line">   argp      unsafe.Pointer <span class="comment">// pointer to arguments of deferred call run during panic; cannot move - known to liblink</span></span><br><span class="line">   arg       <span class="keyword">interface</span>&#123;&#125;    <span class="comment">// argument to panic</span></span><br><span class="line">   link      *_panic        <span class="comment">// link to earlier panic</span></span><br><span class="line">   recovered <span class="keyword">bool</span>           <span class="comment">// whether this panic is over</span></span><br><span class="line">   aborted   <span class="keyword">bool</span>           <span class="comment">// the panic was aborted</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="g"><a href="#g" class="headerlink" title="g"></a>g</h2><p>因为 defer panic 都是绑定在 运行的g上的，所以这里说明一下g中与 defer panic相关的属性</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> g <span class="keyword">struct</span> &#123;</span><br><span class="line">   _panic         *_panic <span class="comment">// panic组成的链表</span></span><br><span class="line">   _defer         *_defer <span class="comment">// defer组成的先进后出的链表，同栈</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h1 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h1><h2 id="main"><a href="#main" class="headerlink" title="main"></a>main</h2><p>最开始，还是通过<code>go tool</code> 来分析一下，底层是通过什么函数来实现的吧</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="built_in">recover</span>()</span><br><span class="line">	&#125;()</span><br><span class="line">	<span class="built_in">panic</span>(<span class="string">"error"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>go build -gcflags=all=”-N -l” main.go</p>
-<p>go tool objdump -s “main.main” main</p>
-</blockquote>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">▶ go tool objdump -s &quot;main\.main&quot; main | grep CALL</span><br><span class="line">  main.go:4             0x4548d0                e81b00fdff              CALL runtime.deferproc(SB)              </span><br><span class="line">  main.go:7             0x4548f2                e8b90cfdff              CALL runtime.gopanic(SB)                </span><br><span class="line">  main.go:4             0x4548fa                e88108fdff              CALL runtime.deferreturn(SB)            </span><br><span class="line">  main.go:3             0x454909                e85282ffff              CALL runtime.morestack_noctxt(SB)       </span><br><span class="line">  main.go:5             0x4549a6                e8d511fdff              CALL runtime.gorecover(SB)              </span><br><span class="line">  main.go:4             0x4549b5                e8a681ffff              CALL runtime.morestack_noctxt(SB)</span><br></pre></td></tr></table></figure>
-<p>综合反编译结果可以看出，<code>defer</code> 关键字首先会调用 <code>runtime.deferproc</code> 定义一个延迟调用对象，然后再函数结束前，调用 <code>runtime.deferreturn</code> 来完成 <code>defer</code> 定义的函数的调用</p>
-<p><code>panic</code> 函数就会调用 <code>runtime.gopanic</code> 来实现相关的逻辑</p>
-<p><code>recover</code> 则调用 <code>runtime.gorecover</code> 来实现 <em>recover</em> 的功能</p>
-<h2 id="deferproc"><a href="#deferproc" class="headerlink" title="deferproc"></a>deferproc</h2><p>根据 defer 关键字后面定义的函数 <em>fn</em> 以及 参数的size，来创建一个延迟执行的 函数，并将这个延迟函数，挂在到当前g的 <em>_defer</em> 的链表上</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">deferproc</span><span class="params">(siz <span class="keyword">int32</span>, fn *funcval)</span></span> &#123; <span class="comment">// arguments of fn follow fn</span></span><br><span class="line">   sp := getcallersp()</span><br><span class="line">   argp := <span class="keyword">uintptr</span>(unsafe.Pointer(&amp;fn)) + unsafe.Sizeof(fn)</span><br><span class="line">   callerpc := getcallerpc()</span><br><span class="line">   <span class="comment">// 获取一个_defer对象， 并放入g._defer链表的头部</span></span><br><span class="line">   d := newdefer(siz)</span><br><span class="line">	 <span class="comment">// 设置defer的fn pc sp等，后面调用</span></span><br><span class="line">   d.fn = fn</span><br><span class="line">   d.pc = callerpc</span><br><span class="line">   d.sp = sp</span><br><span class="line">   <span class="keyword">switch</span> siz &#123;</span><br><span class="line">   <span class="keyword">case</span> <span class="number">0</span>:</span><br><span class="line">      <span class="comment">// Do nothing.</span></span><br><span class="line">   <span class="keyword">case</span> sys.PtrSize:</span><br><span class="line">      <span class="comment">// _defer 后面的内存 存储 argp的地址信息</span></span><br><span class="line">      *(*<span class="keyword">uintptr</span>)(deferArgs(d)) = *(*<span class="keyword">uintptr</span>)(unsafe.Pointer(argp))</span><br><span class="line">   <span class="keyword">default</span>:</span><br><span class="line">      <span class="comment">// 如果不是指针类型的参数，把参数拷贝到 _defer 的后面的内存空间</span></span><br><span class="line">      memmove(deferArgs(d), unsafe.Pointer(argp), <span class="keyword">uintptr</span>(siz))</span><br><span class="line">   &#125;</span><br><span class="line">   return0()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>这个函数看起来比较简答，通过<code>newproc</code> 获取一个 <em>_defer</em> 的对象，并加入到当前g的 <em>_defer</em> 链表的头部，然后再把参数或参数的指针拷贝到 获取到的 <em>_defer</em>对象的 后面的内存空间</p>
-<h3 id="newdefer"><a href="#newdefer" class="headerlink" title="newdefer"></a>newdefer</h3><p><code>newdefer</code> 的作用是获取一个<em>_defer</em>对象， 并推入 <em>g._defer</em>链表的头部</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">newdefer</span><span class="params">(siz <span class="keyword">int32</span>)</span> *_<span class="title">defer</span></span> &#123;</span><br><span class="line">   <span class="keyword">var</span> d *_defer</span><br><span class="line">   <span class="comment">// 根据 size 通过deferclass判断应该分配的 sizeclass，就类似于 内存分配预先确定好几个sizeclass，然后根据size确定sizeclass，找对应的缓存的内存块</span></span><br><span class="line">   sc := deferclass(<span class="keyword">uintptr</span>(siz))</span><br><span class="line">   gp := getg()</span><br><span class="line">   <span class="comment">// 如果sizeclass在既定的sizeclass范围内，去g绑定的p上找</span></span><br><span class="line">   <span class="keyword">if</span> sc &lt; <span class="keyword">uintptr</span>(<span class="built_in">len</span>(p&#123;&#125;.deferpool)) &#123;</span><br><span class="line">      pp := gp.m.p.ptr()</span><br><span class="line">      <span class="keyword">if</span> <span class="built_in">len</span>(pp.deferpool[sc]) == <span class="number">0</span> &amp;&amp; sched.deferpool[sc] != <span class="literal">nil</span> &#123;</span><br><span class="line">         <span class="comment">// 当前sizeclass的缓存数量==0，且不为nil，从sched上获取一批缓存</span></span><br><span class="line">         systemstack(<span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">            lock(&amp;sched.deferlock)</span><br><span class="line">            <span class="keyword">for</span> <span class="built_in">len</span>(pp.deferpool[sc]) &lt; <span class="built_in">cap</span>(pp.deferpool[sc])/<span class="number">2</span> &amp;&amp; sched.deferpool[sc] != <span class="literal">nil</span> &#123;</span><br><span class="line">               d := sched.deferpool[sc]</span><br><span class="line">               sched.deferpool[sc] = d.link</span><br><span class="line">               d.link = <span class="literal">nil</span></span><br><span class="line">               pp.deferpool[sc] = <span class="built_in">append</span>(pp.deferpool[sc], d)</span><br><span class="line">            &#125;</span><br><span class="line">            unlock(&amp;sched.deferlock)</span><br><span class="line">         &#125;)</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 如果从sched获取之后，sizeclass对应的缓存不为空，分配</span></span><br><span class="line">      <span class="keyword">if</span> n := <span class="built_in">len</span>(pp.deferpool[sc]); n &gt; <span class="number">0</span> &#123;</span><br><span class="line">         d = pp.deferpool[sc][n<span class="number">-1</span>]</span><br><span class="line">         pp.deferpool[sc][n<span class="number">-1</span>] = <span class="literal">nil</span></span><br><span class="line">         pp.deferpool[sc] = pp.deferpool[sc][:n<span class="number">-1</span>]</span><br><span class="line">      &#125;</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="comment">// p和sched都没有找到 或者 没有对应的sizeclass，直接分配</span></span><br><span class="line">   <span class="keyword">if</span> d == <span class="literal">nil</span> &#123;</span><br><span class="line">      <span class="comment">// Allocate new defer+args.</span></span><br><span class="line">      systemstack(<span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">         total := roundupsize(totaldefersize(<span class="keyword">uintptr</span>(siz)))</span><br><span class="line">         d = (*_defer)(mallocgc(total, deferType, <span class="literal">true</span>))</span><br><span class="line">      &#125;)</span><br><span class="line">   &#125;</span><br><span class="line">   d.siz = siz</span><br><span class="line">   <span class="comment">// 插入到g._defer的链表头</span></span><br><span class="line">   d.link = gp._defer</span><br><span class="line">   gp._defer = d</span><br><span class="line">   <span class="keyword">return</span> d</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>根据size获取sizeclass，对sizeclass进行分类缓存，这是内存分配时的思想</p>
-<p>先去p上分配，然后批量从全局 sched上获取到本地缓存，这种二级缓存的思想真的是遍布在go源码的各个部分啊</p>
-<h2 id="deferreturn"><a href="#deferreturn" class="headerlink" title="deferreturn"></a>deferreturn</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">deferreturn</span><span class="params">(arg0 <span class="keyword">uintptr</span>)</span></span> &#123;</span><br><span class="line">   gp := getg()</span><br><span class="line">   <span class="comment">// 获取g defer链表的第一个defer，也是最后一个声明的defer</span></span><br><span class="line">   d := gp._defer</span><br><span class="line">   <span class="comment">// 没有defer，就不需要干什么事了</span></span><br><span class="line">   <span class="keyword">if</span> d == <span class="literal">nil</span> &#123;</span><br><span class="line">      <span class="keyword">return</span></span><br><span class="line">   &#125;</span><br><span class="line">   sp := getcallersp()</span><br><span class="line">   <span class="comment">// 如果defer的sp与callersp不匹配，说明defer不对应，有可能是调用了其他栈帧的延迟函数</span></span><br><span class="line">   <span class="keyword">if</span> d.sp != sp &#123;</span><br><span class="line">      <span class="keyword">return</span></span><br><span class="line">   &#125;</span><br><span class="line">   <span class="comment">// 根据d.siz，把原先存储的参数信息获取并存储到arg0里面</span></span><br><span class="line">   <span class="keyword">switch</span> d.siz &#123;</span><br><span class="line">   <span class="keyword">case</span> <span class="number">0</span>:</span><br><span class="line">      <span class="comment">// Do nothing.</span></span><br><span class="line">   <span class="keyword">case</span> sys.PtrSize:</span><br><span class="line">      *(*<span class="keyword">uintptr</span>)(unsafe.Pointer(&amp;arg0)) = *(*<span class="keyword">uintptr</span>)(deferArgs(d))</span><br><span class="line">   <span class="keyword">default</span>:</span><br><span class="line">      memmove(unsafe.Pointer(&amp;arg0), deferArgs(d), <span class="keyword">uintptr</span>(d.siz))</span><br><span class="line">   &#125;</span><br><span class="line">   fn := d.fn</span><br><span class="line">   d.fn = <span class="literal">nil</span></span><br><span class="line">   <span class="comment">// defer用过了就释放了，</span></span><br><span class="line">   gp._defer = d.link</span><br><span class="line">   freedefer(d)</span><br><span class="line">   <span class="comment">// 跳转到执行defer</span></span><br><span class="line">   jmpdefer(fn, <span class="keyword">uintptr</span>(unsafe.Pointer(&amp;arg0)))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="freedefer"><a href="#freedefer" class="headerlink" title="freedefer"></a>freedefer</h3><p>释放defer用到的函数，应该跟调度器、内存分配的思想是一样的</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">freedefer</span><span class="params">(d *_defer)</span></span> &#123;</span><br><span class="line">   <span class="comment">// 判断defer的sizeclass</span></span><br><span class="line">   sc := deferclass(<span class="keyword">uintptr</span>(d.siz))</span><br><span class="line">   <span class="comment">// 超出既定的sizeclass范围的话，就是直接分配的内存，那就不管了</span></span><br><span class="line">   <span class="keyword">if</span> sc &gt;= <span class="keyword">uintptr</span>(<span class="built_in">len</span>(p&#123;&#125;.deferpool)) &#123;</span><br><span class="line">      <span class="keyword">return</span></span><br><span class="line">   &#125;</span><br><span class="line">   pp := getg().m.p.ptr()</span><br><span class="line">   <span class="comment">// p本地sizeclass对应的缓冲区满了，批量转移一半到全局sched</span></span><br><span class="line">   <span class="keyword">if</span> <span class="built_in">len</span>(pp.deferpool[sc]) == <span class="built_in">cap</span>(pp.deferpool[sc]) &#123;</span><br><span class="line">      <span class="comment">// 使用g0来转移</span></span><br><span class="line">      systemstack(<span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">         <span class="keyword">var</span> first, last *_defer</span><br><span class="line">         <span class="keyword">for</span> <span class="built_in">len</span>(pp.deferpool[sc]) &gt; <span class="built_in">cap</span>(pp.deferpool[sc])/<span class="number">2</span> &#123;</span><br><span class="line">            n := <span class="built_in">len</span>(pp.deferpool[sc])</span><br><span class="line">            d := pp.deferpool[sc][n<span class="number">-1</span>]</span><br><span class="line">            pp.deferpool[sc][n<span class="number">-1</span>] = <span class="literal">nil</span></span><br><span class="line">            pp.deferpool[sc] = pp.deferpool[sc][:n<span class="number">-1</span>]</span><br><span class="line">            <span class="comment">// 先将需要转移的那批defer对象串成一个链表</span></span><br><span class="line">            <span class="keyword">if</span> first == <span class="literal">nil</span> &#123;</span><br><span class="line">               first = d</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">               last.link = d</span><br><span class="line">            &#125;</span><br><span class="line">            last = d</span><br><span class="line">         &#125;</span><br><span class="line">         lock(&amp;sched.deferlock)</span><br><span class="line">         <span class="comment">// 把这个链表放到sched.deferpool对应sizeclass的链表头</span></span><br><span class="line">         last.link = sched.deferpool[sc]</span><br><span class="line">         sched.deferpool[sc] = first</span><br><span class="line">         unlock(&amp;sched.deferlock)</span><br><span class="line">      &#125;)</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="comment">// 清空当前要释放的defer的属性</span></span><br><span class="line">   d.siz = <span class="number">0</span></span><br><span class="line">   d.started = <span class="literal">false</span></span><br><span class="line">   d.sp = <span class="number">0</span></span><br><span class="line">   d.pc = <span class="number">0</span></span><br><span class="line">   d.link = <span class="literal">nil</span></span><br><span class="line"></span><br><span class="line">   pp.deferpool[sc] = <span class="built_in">append</span>(pp.deferpool[sc], d)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>二级缓存的思想，在 <a href="https://segmentfault.com/a/1190000020254937" target="_blank" rel="noopener">深入理解Go-goroutine的实现及Scheduler分析</a>， <a href="https://segmentfault.com/a/1190000020286676" target="_blank" rel="noopener">深入理解go-channel和select的原理</a>， <a href="https://segmentfault.com/a/1190000020086769" target="_blank" rel="noopener">深入理解Go-垃圾回收机制</a> 已经分析过了，就不再过多分析了</p>
-<h2 id="gopanic"><a href="#gopanic" class="headerlink" title="gopanic"></a>gopanic</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">gopanic</span><span class="params">(e <span class="keyword">interface</span>&#123;&#125;)</span></span> &#123;</span><br><span class="line">   gp := getg()</span><br><span class="line"></span><br><span class="line">   <span class="keyword">var</span> p _panic</span><br><span class="line">   p.arg = e</span><br><span class="line">   p.link = gp._panic</span><br><span class="line">   gp._panic = (*_panic)(noescape(unsafe.Pointer(&amp;p)))</span><br><span class="line"></span><br><span class="line">   atomic.Xadd(&amp;runningPanicDefers, <span class="number">1</span>)</span><br><span class="line">   <span class="comment">// 依次执行 g._defer链表的defer对象</span></span><br><span class="line">   <span class="keyword">for</span> &#123;</span><br><span class="line">      d := gp._defer</span><br><span class="line">      <span class="keyword">if</span> d == <span class="literal">nil</span> &#123;</span><br><span class="line">         <span class="keyword">break</span></span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="comment">// If defer was started by earlier panic or Goexit (and, since we're back here, that triggered a new panic),</span></span><br><span class="line">      <span class="comment">// take defer off list. The earlier panic or Goexit will not continue running.</span></span><br><span class="line">      <span class="comment">// 正常情况下，defer执行完成之后都会被移除，既然这个defer没有移除，原因只有两种： 1. 这个defer里面引发了panic 2. 这个defer里面引发了 runtime.Goexit，但是这个defer已经执行过了，需要移除，如果引发这个defer没有被移除是第一个原因，那么这个panic也需要移除，因为这个panic也执行过了，这里给panic增加标志位，以待后续移除</span></span><br><span class="line">      <span class="keyword">if</span> d.started &#123;</span><br><span class="line">         <span class="keyword">if</span> d._panic != <span class="literal">nil</span> &#123;</span><br><span class="line">            d._panic.aborted = <span class="literal">true</span></span><br><span class="line">         &#125;</span><br><span class="line">         d._panic = <span class="literal">nil</span></span><br><span class="line">         d.fn = <span class="literal">nil</span></span><br><span class="line">         gp._defer = d.link</span><br><span class="line">         freedefer(d)</span><br><span class="line">         <span class="keyword">continue</span></span><br><span class="line">      &#125;</span><br><span class="line">      d.started = <span class="literal">true</span></span><br><span class="line"></span><br><span class="line">      <span class="comment">// Record the panic that is running the defer.</span></span><br><span class="line">      <span class="comment">// If there is a new panic during the deferred call, that panic</span></span><br><span class="line">      <span class="comment">// will find d in the list and will mark d._panic (this panic) aborted.</span></span><br><span class="line">      <span class="comment">// 把当前的panic 绑定到这个defer上面，defer里面有可能panic，这种情况下就会进入到 上面d.started 的逻辑里面，然后把当前的panic终止掉，因为已经执行过了 </span></span><br><span class="line">      d._panic = (*_panic)(noescape(unsafe.Pointer(&amp;p)))</span><br><span class="line">      <span class="comment">// 执行defer.fn</span></span><br><span class="line">      p.argp = unsafe.Pointer(getargp(<span class="number">0</span>))</span><br><span class="line">      reflectcall(<span class="literal">nil</span>, unsafe.Pointer(d.fn), deferArgs(d), <span class="keyword">uint32</span>(d.siz), <span class="keyword">uint32</span>(d.siz))</span><br><span class="line">      p.argp = <span class="literal">nil</span></span><br><span class="line"></span><br><span class="line">      <span class="comment">// reflectcall did not panic. Remove d.</span></span><br><span class="line">      <span class="keyword">if</span> gp._defer != d &#123;</span><br><span class="line">         throw(<span class="string">"bad defer entry in panic"</span>)</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 解决defer与panic的绑定关系，因为 defer函数已经执行完了，如果有panic或Goexit就不会执行到这里了</span></span><br><span class="line">      d._panic = <span class="literal">nil</span></span><br><span class="line">      d.fn = <span class="literal">nil</span></span><br><span class="line">      gp._defer = d.link</span><br><span class="line"></span><br><span class="line">      <span class="comment">// trigger shrinkage to test stack copy. See stack_test.go:TestStackPanic</span></span><br><span class="line">      <span class="comment">//GC()</span></span><br><span class="line"></span><br><span class="line">      pc := d.pc</span><br><span class="line">      sp := unsafe.Pointer(d.sp) <span class="comment">// must be pointer so it gets adjusted during stack copy</span></span><br><span class="line">      freedefer(d)</span><br><span class="line">      <span class="comment">// panic被recover了，就不需要继续panic了，继续执行剩余的代码</span></span><br><span class="line">      <span class="keyword">if</span> p.recovered &#123;</span><br><span class="line">         atomic.Xadd(&amp;runningPanicDefers, <span class="number">-1</span>)</span><br><span class="line"></span><br><span class="line">         gp._panic = p.link</span><br><span class="line">         <span class="comment">// Aborted panics are marked but remain on the g.panic list.</span></span><br><span class="line">         <span class="comment">// Remove them from the list.</span></span><br><span class="line">         <span class="comment">// 从panic链表中移除aborted的panic，下面解释</span></span><br><span class="line">         <span class="keyword">for</span> gp._panic != <span class="literal">nil</span> &amp;&amp; gp._panic.aborted &#123;</span><br><span class="line">            gp._panic = gp._panic.link</span><br><span class="line">         &#125;</span><br><span class="line">         <span class="keyword">if</span> gp._panic == <span class="literal">nil</span> &#123; <span class="comment">// must be done with signal</span></span><br><span class="line">            gp.sig = <span class="number">0</span></span><br><span class="line">         &#125;</span><br><span class="line">         <span class="comment">// Pass information about recovering frame to recovery.</span></span><br><span class="line">         gp.sigcode0 = <span class="keyword">uintptr</span>(sp)</span><br><span class="line">         gp.sigcode1 = pc</span><br><span class="line">         <span class="comment">// 调用recovery， 恢复当前g的调度执行</span></span><br><span class="line">         mcall(recovery)</span><br><span class="line">         throw(<span class="string">"recovery failed"</span>) <span class="comment">// mcall should not return</span></span><br><span class="line">      &#125;</span><br><span class="line">   &#125;</span><br><span class="line">	 <span class="comment">// 打印panic信息</span></span><br><span class="line">   preprintpanics(gp._panic)</span><br><span class="line">	 <span class="comment">// panic</span></span><br><span class="line">   fatalpanic(gp._panic) <span class="comment">// should not return</span></span><br><span class="line">   *(*<span class="keyword">int</span>)(<span class="literal">nil</span>) = <span class="number">0</span>      <span class="comment">// not reached</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>这里解释一下 <code>gp._panic.aborted</code> 的作用，以下面为例</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">   <span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123; <span class="comment">// defer1</span></span><br><span class="line">      <span class="built_in">recover</span>()</span><br><span class="line">   &#125;()</span><br><span class="line">   panic1()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">panic1</span><span class="params">()</span></span> &#123;</span><br><span class="line">   <span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;  <span class="comment">// defer2</span></span><br><span class="line">      <span class="built_in">panic</span>(<span class="string">"error1"</span>) <span class="comment">// panic2</span></span><br><span class="line">   &#125;()</span><br><span class="line">   <span class="built_in">panic</span>(<span class="string">"error"</span>)  <span class="comment">// panic1</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<ol>
-<li><p>当执行到 <code>panic(&quot;error&quot;)</code> 时</p>
-<p>g._defer链表： g._defer-&gt;defer2-&gt;defer1</p>
-<p>g._panic链表：g._panic-&gt;panic1</p>
-</li>
-<li><p>当执行到 <code>panic(&quot;error1&quot;)</code> 时 </p>
-<p>g._defer链表： g._defer-&gt;defer2-&gt;defer1</p>
-<p>g._panic链表：g._panic-&gt;panic2-&gt;panic1</p>
-</li>
-<li><p>继续执行到 defer1 函数内部，进行recover()</p>
-<p>此时会去恢复 panic2 引起的 <em>panic</em>， panic2.recovered = true，应该顺着g._panic链表继续处理下一个panic了，但是我们可以发现 <code>panic1</code> 已经执行过了，这也就是下面的代码的逻辑了，去掉已经执行过的panic</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> gp._panic != <span class="literal">nil</span> &amp;&amp; gp._panic.aborted &#123;</span><br><span class="line">   gp._panic = gp._panic.link</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<p>panic的逻辑可以梳理一下：</p>
-<p>程序在遇到panic的时候，就不再继续执行下去了，先把当前<code>panic</code> 挂载到 <code>g._panic</code> 链表上，开始遍历当前g的<code>g._defer</code>链表，然后执行<code>_defer</code>对象定义的函数等，如果 defer函数在调用过程中又发生了 panic，则又执行到了 <code>gopanic</code>函数，最后，循环打印所有panic的信息，并退出当前g。然而，如果调用defer的过程中，遇到了recover，则继续进行调度（mcall(recovery)）。</p>
-<h3 id="recovery"><a href="#recovery" class="headerlink" title="recovery"></a>recovery</h3><p>恢复一个被panic的g，重新进入并继续执行调度</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">recovery</span><span class="params">(gp *g)</span></span> &#123;</span><br><span class="line">   <span class="comment">// Info about defer passed in G struct.</span></span><br><span class="line">   sp := gp.sigcode0</span><br><span class="line">   pc := gp.sigcode1</span><br><span class="line">   <span class="comment">// Make the deferproc for this d return again,</span></span><br><span class="line">   <span class="comment">// this time returning 1.  The calling function will</span></span><br><span class="line">   <span class="comment">// jump to the standard return epilogue.</span></span><br><span class="line">   <span class="comment">// 记录defer返回的sp pc</span></span><br><span class="line">   gp.sched.sp = sp</span><br><span class="line">   gp.sched.pc = pc</span><br><span class="line">   gp.sched.lr = <span class="number">0</span></span><br><span class="line">   gp.sched.ret = <span class="number">1</span></span><br><span class="line">   <span class="comment">// 重新恢复执行调度</span></span><br><span class="line">   gogo(&amp;gp.sched)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="gorecover"><a href="#gorecover" class="headerlink" title="gorecover"></a>gorecover</h2><p><code>gorecovery</code> 仅仅只是设置了 <code>g._panic.recovered</code> 的标志位</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">gorecover</span><span class="params">(argp <span class="keyword">uintptr</span>)</span> <span class="title">interface</span></span>&#123;&#125; &#123;</span><br><span class="line">   gp := getg()</span><br><span class="line">   p := gp._panic</span><br><span class="line">   <span class="comment">// 需要根据 argp的地址，判断是否在defer函数中被调用</span></span><br><span class="line">   <span class="keyword">if</span> p != <span class="literal">nil</span> &amp;&amp; !p.recovered &amp;&amp; argp == <span class="keyword">uintptr</span>(p.argp) &#123;</span><br><span class="line">      <span class="comment">// 设置标志位，上面gopanic中会对这个标志位做判断</span></span><br><span class="line">      p.recovered = <span class="literal">true</span></span><br><span class="line">      <span class="keyword">return</span> p.arg</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="goexit"><a href="#goexit" class="headerlink" title="goexit"></a>goexit</h2><p>我们还忽略了一个点，当我们手动调用 <code>runtime.Goexit()</code> 退出的时候，defer函数也会执行，我们分析一下这种情况</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Goexit</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="comment">// Run all deferred functions for the current goroutine.</span></span><br><span class="line">	<span class="comment">// This code is similar to gopanic, see that implementation</span></span><br><span class="line">	<span class="comment">// for detailed comments.</span></span><br><span class="line">	gp := getg()</span><br><span class="line">  <span class="comment">// 遍历defer链表</span></span><br><span class="line">	<span class="keyword">for</span> &#123;</span><br><span class="line">		d := gp._defer</span><br><span class="line">		<span class="keyword">if</span> d == <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">break</span></span><br><span class="line">		&#125;</span><br><span class="line">    <span class="comment">// 如果 defer已经执行过了，与defer绑定的panic 终止掉</span></span><br><span class="line">		<span class="keyword">if</span> d.started &#123;</span><br><span class="line">			<span class="keyword">if</span> d._panic != <span class="literal">nil</span> &#123;</span><br><span class="line">				d._panic.aborted = <span class="literal">true</span></span><br><span class="line">				d._panic = <span class="literal">nil</span></span><br><span class="line">			&#125;</span><br><span class="line">			d.fn = <span class="literal">nil</span></span><br><span class="line">      <span class="comment">// 从defer链表中移除</span></span><br><span class="line">			gp._defer = d.link</span><br><span class="line">      <span class="comment">// 释放defer</span></span><br><span class="line">			freedefer(d)</span><br><span class="line">			<span class="keyword">continue</span></span><br><span class="line">		&#125;</span><br><span class="line">    <span class="comment">// 调用defer内部函数</span></span><br><span class="line">		d.started = <span class="literal">true</span></span><br><span class="line">		reflectcall(<span class="literal">nil</span>, unsafe.Pointer(d.fn), deferArgs(d), <span class="keyword">uint32</span>(d.siz), <span class="keyword">uint32</span>(d.siz))</span><br><span class="line">		<span class="keyword">if</span> gp._defer != d &#123;</span><br><span class="line">			throw(<span class="string">"bad defer entry in Goexit"</span>)</span><br><span class="line">		&#125;</span><br><span class="line">		d._panic = <span class="literal">nil</span></span><br><span class="line">		d.fn = <span class="literal">nil</span></span><br><span class="line">		gp._defer = d.link</span><br><span class="line">		freedefer(d)</span><br><span class="line">		<span class="comment">// Note: we ignore recovers here because Goexit isn't a panic</span></span><br><span class="line">	&#125;</span><br><span class="line">  <span class="comment">// 调用goexit0，清除当前g的属性，重新进入调度</span></span><br><span class="line">	goexit1()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="图示解析"><a href="#图示解析" class="headerlink" title="图示解析"></a>图示解析</h2><p>源码这一块阅读起来难度并不是很大，如果还有什么疑惑，希望下面的一副动图能解开你的疑惑</p>
-<p><img src="http://note-1253518569.cossh.myqcloud.com/20190905214602.gif" alt></p>
-<p>作图作的略拙劣，见谅</p>
-<p>步骤解析：</p>
-<ol>
-<li>L3: 生成一个defer1，放到g._defer链表上</li>
-<li>L11: 生成一个defer2，挂载到g._defer链表上</li>
-<li>L14: panic1 调用 gopanic，将当前panic放到g._panic链表上</li>
-<li>L14: 因为panic1，从g._defer 链表头部提取到defer2，开始执行</li>
-<li>L12: 执行defer2，又一个panic，挂载到g._panic链表上</li>
-<li>L12: 因为panic2，从g._defer链表头部提取到defer2，发现defer2已经执行过了移出链表，，且defer2是因为panic1而触发的，跳过defer2，并abort panic1</li>
-<li>L12: 继续提取g._defer链表的下一个，提取到defer1</li>
-<li>L5: defer1 执行recover，recover掉panic2，移除链表，判断下一个panic，即panic1，panic1已经被defer2 aborted掉了，移除panic1</li>
-<li>defer1 执行完了，移除defer1</li>
-</ol>
-<h1 id="关联文档"><a href="#关联文档" class="headerlink" title="关联文档"></a>关联文档</h1><ul>
-<li>二级缓存，sizeclass:  <a href="https://segmentfault.com/a/1190000020086769" target="_blank" rel="noopener">深入理解Go-垃圾回收机制</a></li>
-<li>gogo goexit0 调度: <a href="https://segmentfault.com/a/1190000020254937" target="_blank" rel="noopener">深入理解Go-goroutine的实现及Scheduler分析</a></li>
-</ul>
-<h1 id="参考文档"><a href="#参考文档" class="headerlink" title="参考文档"></a>参考文档</h1><ul>
-<li>《Go语言学习笔记》–雨痕</li>
-</ul>
-
-          
+          <p><code>Defer</code> 也是Go里面比较特别的一个关键字了，主要就是用来保证在程序执行过程中，defer后面的函数都会被执行到，一般用来关闭连接、清理资源等。</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/posts/54038/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -1705,342 +1978,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/30113/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="TY·Loafer">
-      <meta itemprop="description" content>
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="TY·Loafer">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/posts/30113/" itemprop="url">Go学习之Channel的一些模式</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-06-19T18:04:00+08:00">
-                2019-06-19
-              </time>
-            
-
-            
-              <span class="post-meta-divider">|</span>
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-check-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">更新于&#58;</span>
-              
-              <time title="更新于" itemprop="dateModified" datetime="2019-06-25T14:38:06+08:00">
-                2019-06-25
-              </time>
-            
-          </span>
-
-          
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Go/" itemprop="url" rel="index">
-                    <span itemprop="name">Go</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/posts/30113/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/30113/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>除了在goroutine之间安全的传递数据之外，在看了《Concurrency in Go》之后，感慨channel还有那么多模式可供使用，在个人的学习中总结了以下几种常用的模式</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/posts/30113/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/30283/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="TY·Loafer">
-      <meta itemprop="description" content>
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="TY·Loafer">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/posts/30283/" itemprop="url">Go学习之Channel总结</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-06-19T18:04:00+08:00">
-                2019-06-19
-              </time>
-            
-
-            
-              <span class="post-meta-divider">|</span>
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-check-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">更新于&#58;</span>
-              
-              <time title="更新于" itemprop="dateModified" datetime="2019-06-25T14:26:16+08:00">
-                2019-06-25
-              </time>
-            
-          </span>
-
-          
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Go/" itemprop="url" rel="index">
-                    <span itemprop="name">Go</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/posts/30283/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/30283/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>Channel是Go中的一个核心类型，你可以把它看成一个管道，通过它并发核心单元就可以发送或者接收数据进行通讯(communication)。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/posts/30283/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
   </section>
 
   
@@ -2091,7 +2028,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">68</span>
+                  <span class="site-state-item-count">70</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
