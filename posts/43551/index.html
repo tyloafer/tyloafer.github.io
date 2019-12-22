@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+<meta name="google-site-verification" content="aJfmwTFoP_DZ-z9B6oke2ZpCij2Ny4-bE0nbIa9bIEs">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="GO,Gorm,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="TY·Loafer" type="application/atom+xml">
+
+
+
+
+
+
+<meta name="description" content="在我印象中有个错误的认知：如果GORM没有找到record，则会返回ErrRecordNotFound 的错误，知道上次业务中出现了bug，我才发现这个印象中的认知是错误的，且没有官方文档的支持。那么，ErrRecordNotFound  到底在什么时候返回呢，这篇文章将会根据源码来进行分析一下">
+<meta name="keywords" content="GO,Gorm">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GORM之ErrRecordNotFound采坑记录">
+<meta property="og:url" content="https://tyloafer.github.io/posts/43551/index.html">
+<meta property="og:site_name" content="TY·Loafer">
+<meta property="og:description" content="在我印象中有个错误的认知：如果GORM没有找到record，则会返回ErrRecordNotFound 的错误，知道上次业务中出现了bug，我才发现这个印象中的认知是错误的，且没有官方文档的支持。那么，ErrRecordNotFound  到底在什么时候返回呢，这篇文章将会根据源码来进行分析一下">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-12-22T08:16:08.627Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="GORM之ErrRecordNotFound采坑记录">
+<meta name="twitter:description" content="在我印象中有个错误的认知：如果GORM没有找到record，则会返回ErrRecordNotFound 的错误，知道上次业务中出现了bug，我才发现这个印象中的认知是错误的，且没有官方文档的支持。那么，ErrRecordNotFound  到底在什么时候返回呢，这篇文章将会根据源码来进行分析一下">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="https://tyloafer.github.io/posts/43551/">
+
+
+
+
+
+  <title>GORM之ErrRecordNotFound采坑记录 | TY·Loafer</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">TY·Loafer</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="https://tyloafer.github.io/posts/43551/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="TY·Loafer">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="TY·Loafer">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">GORM之ErrRecordNotFound采坑记录</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-12-22T16:08:00+08:00">
+                2019-12-22
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于&#58;</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-12-22T16:16:08+08:00">
+                2019-12-22
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Go/" itemprop="url" rel="index">
+                    <span itemprop="name">Go</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/posts/43551/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="posts/43551/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在我印象中有个错误的认知：如果GORM没有找到record，则会返回<code>ErrRecordNotFound</code> 的错误，知道上次业务中出现了bug，我才发现这个印象中的认知是错误的，且没有官方文档的支持。那么，<code>ErrRecordNotFound</code>  到底在什么时候返回呢，这篇文章将会根据源码来进行分析一下</p>
+<a id="more"></a>
+<h1 id="demo"><a href="#demo" class="headerlink" title="demo"></a>demo</h1><p>首先我们先来看一个示例，然后，猜测一下打印的结果</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">  <span class="string">"fmt"</span></span><br><span class="line"></span><br><span class="line">  <span class="string">"github.com/jinzhu/gorm"</span></span><br><span class="line">  _ <span class="string">"github.com/jinzhu/gorm/dialects/mysql"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> User <span class="keyword">struct</span> &#123;</span><br><span class="line">  ID    <span class="keyword">int64</span>  <span class="string">`gorm:"column:id;primary_key" json:"id"`</span></span><br><span class="line">  Name  <span class="keyword">string</span> <span class="string">`gorm:"column:name" json:"name"`</span></span><br><span class="line">  Email <span class="keyword">string</span> <span class="string">`gorm:"column:email" json:"email"`</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(user *User)</span> <span class="title">TableName</span><span class="params">()</span> <span class="title">string</span></span> &#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="string">"ranger_user"</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">  db := open()</span><br><span class="line">  user := &amp;User&#123;&#125;</span><br><span class="line">  users := <span class="built_in">make</span>([]*User, <span class="number">0</span>, <span class="number">0</span>)</span><br><span class="line">  err := db.Model(user).Where(<span class="string">"id = ?"</span>, <span class="number">1</span>).First(user).Error</span><br><span class="line">  fmt.Println(err, user)</span><br><span class="line"></span><br><span class="line">  err = db.Model(user).Where(<span class="string">"id = ?"</span>, <span class="number">1</span>).Find(&amp;users).Error</span><br><span class="line">  fmt.Println(err, user)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">open</span><span class="params">()</span> *<span class="title">gorm</span>.<span class="title">DB</span></span> &#123;</span><br><span class="line">  db, err := gorm.Open(<span class="string">"mysql"</span>,</span><br><span class="line">     <span class="string">"user:pass@(ip:port)/db?charset=utf8&amp;parseTime=True&amp;loc=Local"</span>)</span><br><span class="line">  <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">     <span class="built_in">panic</span>(err)</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> db</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>结果：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">record not found &amp;&#123;0  &#125;</span><br><span class="line">&lt;nil&gt; &amp;&#123;0  &#125;</span><br></pre></td></tr></table></figure>
+<p>综上，可以发现，<code>First()</code> 函数找不到record的时候，会返回<code>ErrRecordNotFound</code> ， 而<code>Find()</code> 则是返回nil，好了，这篇文章就到此结束了</p>
+<p>当然，上面一句是开玩笑的，我可不是标题党，没点干货，怎好意思在这扯淡，下面我们开始追进源码</p>
+<h1 id="结构"><a href="#结构" class="headerlink" title="结构"></a>结构</h1><p>这里是后面可能会用到的一些数据结构，放在前面有个印象，便于理解</p>
+<h2 id="DB"><a href="#DB" class="headerlink" title="DB"></a>DB</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// DB contains information for current db connection</span></span><br><span class="line"><span class="keyword">type</span> DB <span class="keyword">struct</span> &#123;</span><br><span class="line">	sync.RWMutex</span><br><span class="line">	Value        <span class="keyword">interface</span>&#123;&#125;  <span class="comment">// 这里存放的model结构体，可通过结构体的方法，找到需要查询的表</span></span><br><span class="line">	Error        error        <span class="comment">// 出错信息</span></span><br><span class="line">	RowsAffected <span class="keyword">int64</span>        <span class="comment">// sql返回的 rows affected</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">// single db</span></span><br><span class="line">	db                SQLCommon <span class="comment">// db信息，这里是最小数据库连接所需用到的函数的interface</span></span><br><span class="line">	blockGlobalUpdate <span class="keyword">bool</span></span><br><span class="line">	logMode           logModeValue</span><br><span class="line">	logger            logger</span><br><span class="line">	search            *search   <span class="comment">// where order group 等条件存放的地方</span></span><br><span class="line">	values            sync.Map  <span class="comment">// 数据结果集</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">// global db</span></span><br><span class="line">	parent        *DB    <span class="comment">// parent db， gorm的大部分函数，都会clone一个自身，然后把被clone的对象放在这里</span></span><br><span class="line">	callbacks     *Callback <span class="comment">// 回调函数</span></span><br><span class="line">	dialect       Dialect </span><br><span class="line">	singularTable <span class="keyword">bool</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">// function to be used to override the creating of a new timestamp</span></span><br><span class="line">	nowFuncOverride <span class="function"><span class="keyword">func</span><span class="params">()</span> <span class="title">time</span>.<span class="title">Time</span></span></span><br><span class="line"><span class="function">&#125;</span></span><br></pre></td></tr></table></figure>
+<h2 id="Scope"><a href="#Scope" class="headerlink" title="Scope"></a>Scope</h2><p>scope结构体记录了当前对数据库的所有操作</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Scope <span class="keyword">struct</span> &#123;</span><br><span class="line">	Search          *search</span><br><span class="line">	Value           <span class="keyword">interface</span>&#123;&#125;  <span class="comment">// 用户通过First,Find 传入的结果容器变量</span></span><br><span class="line">	SQL             <span class="keyword">string</span></span><br><span class="line">	SQLVars         []<span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">	db              *DB</span><br><span class="line">	instanceID      <span class="keyword">string</span></span><br><span class="line">	primaryKeyField *Field</span><br><span class="line">	skipLeft        <span class="keyword">bool</span></span><br><span class="line">	fields          *[]*Field</span><br><span class="line">	selectAttrs     *[]<span class="keyword">string</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="SQLCommon"><a href="#SQLCommon" class="headerlink" title="SQLCommon"></a>SQLCommon</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// SQLCommon is the minimal database connection functionality gorm requires.  Implemented by *sql.DB.</span></span><br><span class="line"><span class="keyword">type</span> SQLCommon <span class="keyword">interface</span> &#123;</span><br><span class="line">	Exec(query <span class="keyword">string</span>, args ...<span class="keyword">interface</span>&#123;&#125;) (sql.Result, error)</span><br><span class="line">	Prepare(query <span class="keyword">string</span>) (*sql.Stmt, error)</span><br><span class="line">	Query(query <span class="keyword">string</span>, args ...<span class="keyword">interface</span>&#123;&#125;) (*sql.Rows, error)</span><br><span class="line">	QueryRow(query <span class="keyword">string</span>, args ...<span class="keyword">interface</span>&#123;&#125;) *sql.Row</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="search"><a href="#search" class="headerlink" title="search"></a>search</h2><p>sql条件的搜索语句都记录在这里了，最后拼接出来sql</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> search <span class="keyword">struct</span> &#123;</span><br><span class="line">	db               *DB</span><br><span class="line">	whereConditions  []<span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">	orConditions     []<span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">	notConditions    []<span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">	havingConditions []<span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">	joinConditions   []<span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">	initAttrs        []<span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">	assignAttrs      []<span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">	selects          <span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">	omits            []<span class="keyword">string</span></span><br><span class="line">	orders           []<span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">	preload          []searchPreload</span><br><span class="line">	offset           <span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">	limit            <span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">	group            <span class="keyword">string</span></span><br><span class="line">	tableName        <span class="keyword">string</span></span><br><span class="line">	raw              <span class="keyword">bool</span></span><br><span class="line">	Unscoped         <span class="keyword">bool</span></span><br><span class="line">	ignoreOrderQuery <span class="keyword">bool</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="Callback"><a href="#Callback" class="headerlink" title="Callback"></a>Callback</h2><p>记录了各个查询的回调函数，相应查询完成后，会调用对应的回调函数</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Callback <span class="keyword">struct</span> &#123;</span><br><span class="line">	logger     logger</span><br><span class="line">	creates    []*<span class="function"><span class="keyword">func</span><span class="params">(scope *Scope)</span></span></span><br><span class="line"><span class="function">	<span class="title">updates</span>    []*<span class="title">func</span><span class="params">(scope *Scope)</span></span></span><br><span class="line"><span class="function">	<span class="title">deletes</span>    []*<span class="title">func</span><span class="params">(scope *Scope)</span></span></span><br><span class="line"><span class="function">	<span class="title">queries</span>    []*<span class="title">func</span><span class="params">(scope *Scope)</span></span></span><br><span class="line"><span class="function">	<span class="title">rowQueries</span> []*<span class="title">func</span><span class="params">(scope *Scope)</span></span></span><br><span class="line"><span class="function">	<span class="title">processors</span> []*<span class="title">CallbackProcessor</span></span></span><br><span class="line"><span class="function">&#125;</span></span><br></pre></td></tr></table></figure>
+<h2 id="CallbackProcessor"><a href="#CallbackProcessor" class="headerlink" title="CallbackProcessor"></a>CallbackProcessor</h2><p>callback的详情信息，可根据这些信息，对callback进行排序，然后再放入到 <code>Callback</code> 结构体 <code>creates</code> 等属性中</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// CallbackProcessor contains callback informations</span></span><br><span class="line"><span class="keyword">type</span> CallbackProcessor <span class="keyword">struct</span> &#123;</span><br><span class="line">	logger    logger</span><br><span class="line">	name      <span class="keyword">string</span>              <span class="comment">// current callback's name</span></span><br><span class="line">	before    <span class="keyword">string</span>              <span class="comment">// register current callback before a callback</span></span><br><span class="line">	after     <span class="keyword">string</span>              <span class="comment">// register current callback after a callback</span></span><br><span class="line">	replace   <span class="keyword">bool</span>                <span class="comment">// replace callbacks with same name</span></span><br><span class="line">	remove    <span class="keyword">bool</span>                <span class="comment">// delete callbacks with same name</span></span><br><span class="line">	kind      <span class="keyword">string</span>              <span class="comment">// callback type: create, update, delete, query, row_query</span></span><br><span class="line">	processor *<span class="function"><span class="keyword">func</span><span class="params">(scope *Scope)</span> // <span class="title">callback</span> <span class="title">handler</span></span></span><br><span class="line"><span class="function">	<span class="title">parent</span>    *<span class="title">Callback</span></span></span><br><span class="line"><span class="function">&#125;</span></span><br></pre></td></tr></table></figure>
+<h1 id="新建连接"><a href="#新建连接" class="headerlink" title="新建连接"></a>新建连接</h1><p>查询第一步，先建立好连接</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Open</span><span class="params">(dialect <span class="keyword">string</span>, args ...<span class="keyword">interface</span>&#123;&#125;)</span> <span class="params">(db *DB, err error)</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(args) == <span class="number">0</span> &#123;</span><br><span class="line">		err = errors.New(<span class="string">"invalid database source"</span>)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">var</span> source <span class="keyword">string</span></span><br><span class="line">	<span class="keyword">var</span> dbSQL SQLCommon</span><br><span class="line">	<span class="keyword">var</span> ownDbSQL <span class="keyword">bool</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">switch</span> value := args[<span class="number">0</span>].(<span class="keyword">type</span>) &#123;</span><br><span class="line">	<span class="keyword">case</span> <span class="keyword">string</span>:</span><br><span class="line">		<span class="comment">// 根据 dialect 判断数据库驱动类型</span></span><br><span class="line">		<span class="keyword">var</span> driver = dialect</span><br><span class="line">		<span class="keyword">if</span> <span class="built_in">len</span>(args) == <span class="number">1</span> &#123;</span><br><span class="line">			source = value</span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> <span class="built_in">len</span>(args) &gt;= <span class="number">2</span> &#123;</span><br><span class="line">			driver = value</span><br><span class="line">			source = args[<span class="number">1</span>].(<span class="keyword">string</span>)</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="comment">// 调用底层的database.sql 来建立一个sql.DB</span></span><br><span class="line">		dbSQL, err = sql.Open(driver, source)</span><br><span class="line">		ownDbSQL = <span class="literal">true</span></span><br><span class="line">	<span class="keyword">case</span> SQLCommon:</span><br><span class="line">		<span class="comment">// 如果原先就是 SQLCommon interface，直接拿过来使用即可</span></span><br><span class="line">		dbSQL = value</span><br><span class="line">		ownDbSQL = <span class="literal">false</span></span><br><span class="line">	<span class="keyword">default</span>:</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, fmt.Errorf(<span class="string">"invalid database source: %v is not a valid type"</span>, value)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	db = &amp;DB&#123;</span><br><span class="line">		db:        dbSQL,</span><br><span class="line">		logger:    defaultLogger,</span><br><span class="line">		callbacks: DefaultCallback,</span><br><span class="line">		dialect:   newDialect(dialect, dbSQL),</span><br><span class="line">	&#125;</span><br><span class="line">	db.parent = db</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// Send a ping to make sure the database connection is alive.</span></span><br><span class="line">	<span class="comment">// 发个ping，确保连接有效</span></span><br><span class="line">	<span class="keyword">if</span> d, ok := dbSQL.(*sql.DB); ok &#123;</span><br><span class="line">		<span class="keyword">if</span> err = d.Ping(); err != <span class="literal">nil</span> &amp;&amp; ownDbSQL &#123;</span><br><span class="line">			d.Close()</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看出，gorm.Open 也是调用了go提供的 sql.Open 来建立一个链接，最后ping一下，确保这个链接有效</p>
+<h1 id="查询"><a href="#查询" class="headerlink" title="查询"></a>查询</h1><h2 id="查询函数"><a href="#查询函数" class="headerlink" title="查询函数"></a>查询函数</h2><p>链接建立完了，后面就开始进行查询了，逐个分析查询中的各个函数</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *DB)</span> <span class="title">Model</span><span class="params">(value <span class="keyword">interface</span>&#123;&#125;)</span> *<span class="title">DB</span></span> &#123;</span><br><span class="line">  <span class="comment">// 首先clone自身，确保使用了函数后，不会影响原先的变量</span></span><br><span class="line">	c := s.clone()</span><br><span class="line">  <span class="comment">// 把传过来的结构体，设给Value</span></span><br><span class="line">	c.Value = value</span><br><span class="line">	<span class="keyword">return</span> c</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Where return a new relation, filter records with given conditions, accepts `map`, `struct` or `string` as conditions, refer http://jinzhu.github.io/gorm/crud.html#query</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *DB)</span> <span class="title">Where</span><span class="params">(query <span class="keyword">interface</span>&#123;&#125;, args ...<span class="keyword">interface</span>&#123;&#125;)</span> *<span class="title">DB</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> s.clone().search.Where(query, args...).db</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// search.Where</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *search)</span> <span class="title">Where</span><span class="params">(query <span class="keyword">interface</span>&#123;&#125;, values ...<span class="keyword">interface</span>&#123;&#125;)</span> *<span class="title">search</span></span> &#123;</span><br><span class="line">  <span class="comment">// 把搜索条件追加到search的 whereConditions 属性里面</span></span><br><span class="line">	s.whereConditions = <span class="built_in">append</span>(s.whereConditions, <span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">interface</span>&#123;&#125;&#123;<span class="string">"query"</span>: query, <span class="string">"args"</span>: values&#125;)</span><br><span class="line">	<span class="keyword">return</span> s</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="First"><a href="#First" class="headerlink" title="First"></a>First</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// First find first record that match given conditions, order by primary key</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *DB)</span> <span class="title">First</span><span class="params">(out <span class="keyword">interface</span>&#123;&#125;, where ...<span class="keyword">interface</span>&#123;&#125;)</span> *<span class="title">DB</span></span> &#123;</span><br><span class="line">	newScope := s.NewScope(out)</span><br><span class="line">	newScope.Search.Limit(<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> newScope.Set(<span class="string">"gorm:order_by_primary_key"</span>, <span class="string">"ASC"</span>).</span><br><span class="line">		inlineCondition(where...).callCallbacks(s.parent.callbacks.queries).db</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// NewScope create a scope for current operation</span></span><br><span class="line"><span class="comment">// 创建一个新的scope结构体，并记录当前的所有操作</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *DB)</span> <span class="title">NewScope</span><span class="params">(value <span class="keyword">interface</span>&#123;&#125;)</span> *<span class="title">Scope</span></span> &#123;</span><br><span class="line">	dbClone := s.clone()</span><br><span class="line">	dbClone.Value = value</span><br><span class="line">	scope := &amp;Scope&#123;db: dbClone, Value: value&#125;</span><br><span class="line">	<span class="keyword">if</span> s.search != <span class="literal">nil</span> &#123;</span><br><span class="line">		scope.Search = s.search.clone()</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		scope.Search = &amp;search&#123;&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> scope</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 记录追加当前操作的条件语句</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(scope *Scope)</span> <span class="title">inlineCondition</span><span class="params">(values ...<span class="keyword">interface</span>&#123;&#125;)</span> *<span class="title">Scope</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(values) &gt; <span class="number">0</span> &#123;</span><br><span class="line">		scope.Search.Where(values[<span class="number">0</span>], values[<span class="number">1</span>:]...)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> scope</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Find"><a href="#Find" class="headerlink" title="Find"></a>Find</h3><p>Find方法与First的逻辑很像，First增加了一个Limit(1)， 而Find没有</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Find find records that match given conditions</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *DB)</span> <span class="title">Find</span><span class="params">(out <span class="keyword">interface</span>&#123;&#125;, where ...<span class="keyword">interface</span>&#123;&#125;)</span> *<span class="title">DB</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> s.NewScope(out).inlineCondition(where...).callCallbacks(s.parent.callbacks.queries).db</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>执行到这里，我们发现，我们设置了sql的查询条件，但是貌似这个sql还没有执行呢，就剩下一个 <code>callCallbacks</code> 没有执行了，难道在这个函数里面，拼接sql并执行吗，后面就继续探索一下</p>
+<h3 id="callCallbacks"><a href="#callCallbacks" class="headerlink" title="callCallbacks"></a>callCallbacks</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(scope *Scope)</span> <span class="title">callCallbacks</span><span class="params">(funcs []*<span class="keyword">func</span>(s *Scope)</span>) *<span class="title">Scope</span></span> &#123;</span><br><span class="line">	<span class="keyword">defer</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> err := <span class="built_in">recover</span>(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">if</span> db, ok := scope.db.db.(sqlTx); ok &#123;</span><br><span class="line">				db.Rollback()</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="built_in">panic</span>(err)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line">  <span class="comment">// 好像就是根据传过来的函数，一个个的执行了</span></span><br><span class="line">	<span class="keyword">for</span> _, f := <span class="keyword">range</span> funcs &#123;</span><br><span class="line">		(*f)(scope)</span><br><span class="line">		<span class="keyword">if</span> scope.skipLeft &#123;</span><br><span class="line">			<span class="keyword">break</span></span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> scope</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>就这样，那么 <code>callCallbacks</code> 到底执行了啥？</p>
+<p>想要知道<code>callCallbacks</code> 到底执行了什么，我们就要看看，调用<code>callCallbacks</code> 时，传了什么过来</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">s.NewScope(out).inlineCondition(where...).callCallbacks(s.parent.callbacks.queries).db</span><br></pre></td></tr></table></figure>
+<p><code>s.parent.callbacks.queries</code> 这个好像一直没有看到有赋值的地方，那就只有 <code>init()</code> 来解释了，那么就看一下 gorm初始化都干了什么</p>
+<h2 id="gorm-初始化"><a href="#gorm-初始化" class="headerlink" title="gorm 初始化"></a>gorm 初始化</h2><p>callback_query.go</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">init</span><span class="params">()</span></span> &#123;</span><br><span class="line">	DefaultCallback.Query().Register(<span class="string">"gorm:query"</span>, queryCallback)</span><br><span class="line">	DefaultCallback.Query().Register(<span class="string">"gorm:preload"</span>, preloadCallback)</span><br><span class="line">	DefaultCallback.Query().Register(<span class="string">"gorm:after_query"</span>, afterQueryCallback)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>callback_delete.go</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">init</span><span class="params">()</span></span> &#123;</span><br><span class="line">	DefaultCallback.Delete().Register(<span class="string">"gorm:begin_transaction"</span>, beginTransactionCallback)</span><br><span class="line">	DefaultCallback.Delete().Register(<span class="string">"gorm:before_delete"</span>, beforeDeleteCallback)</span><br><span class="line">	DefaultCallback.Delete().Register(<span class="string">"gorm:delete"</span>, deleteCallback)</span><br><span class="line">	DefaultCallback.Delete().Register(<span class="string">"gorm:after_delete"</span>, afterDeleteCallback)</span><br><span class="line">	DefaultCallback.Delete().Register(<span class="string">"gorm:commit_or_rollback_transaction"</span>, commitOrRollbackTransactionCallback)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>等等，create、update均有对应的init函数，这里就不继续扩展了</p>
+<h2 id="注册回调"><a href="#注册回调" class="headerlink" title="注册回调"></a>注册回调</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Query could be used to register callbacks for querying objects with query methods like `Find`, `First`, `Related`, `Association`...</span></span><br><span class="line"><span class="comment">// Refer `Create` for usage</span></span><br><span class="line"><span class="comment">// 创建一个CallbackProcessor 的结构体，在这个结构体上注册信息</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *Callback)</span> <span class="title">Query</span><span class="params">()</span> *<span class="title">CallbackProcessor</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> &amp;CallbackProcessor&#123;logger: c.logger, kind: <span class="string">"query"</span>, parent: c&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Register a new callback, refer `Callbacks.Create`</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(cp *CallbackProcessor)</span> <span class="title">Register</span><span class="params">(callbackName <span class="keyword">string</span>, callback <span class="keyword">func</span>(scope *Scope)</span>)</span> &#123;</span><br><span class="line">	<span class="keyword">if</span> cp.kind == <span class="string">"row_query"</span> &#123;</span><br><span class="line">		<span class="keyword">if</span> cp.before == <span class="string">""</span> &amp;&amp; cp.after == <span class="string">""</span> &amp;&amp; callbackName != <span class="string">"gorm:row_query"</span> &#123;</span><br><span class="line">			cp.logger.Print(fmt.Sprintf(<span class="string">"Registering RowQuery callback %v without specify order with Before(), After(), applying Before('gorm:row_query') by default for compatibility...\n"</span>, callbackName))</span><br><span class="line">			cp.before = <span class="string">"gorm:row_query"</span></span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">//继续赋值CallbackProcessor的属性，并把CallbackProcessor结构体追加到processors slice中</span></span><br><span class="line">	cp.name = callbackName</span><br><span class="line">	cp.processor = &amp;callback</span><br><span class="line">	cp.parent.processors = <span class="built_in">append</span>(cp.parent.processors, cp)</span><br><span class="line">  <span class="comment">// 通过record，区分是 create update，并追加到不同的属性上</span></span><br><span class="line">	cp.parent.reorder()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// reorder all registered processors, and reset CRUD callbacks</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *Callback)</span> <span class="title">reorder</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> creates, updates, deletes, queries, rowQueries []*CallbackProcessor</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> _, processor := <span class="keyword">range</span> c.processors &#123;</span><br><span class="line">		<span class="keyword">if</span> processor.name != <span class="string">""</span> &#123;</span><br><span class="line">			<span class="keyword">switch</span> processor.kind &#123;</span><br><span class="line">			<span class="keyword">case</span> <span class="string">"create"</span>:</span><br><span class="line">				creates = <span class="built_in">append</span>(creates, processor)</span><br><span class="line">			<span class="keyword">case</span> <span class="string">"update"</span>:</span><br><span class="line">				updates = <span class="built_in">append</span>(updates, processor)</span><br><span class="line">			<span class="keyword">case</span> <span class="string">"delete"</span>:</span><br><span class="line">				deletes = <span class="built_in">append</span>(deletes, processor)</span><br><span class="line">			<span class="keyword">case</span> <span class="string">"query"</span>:</span><br><span class="line">				queries = <span class="built_in">append</span>(queries, processor)</span><br><span class="line">			<span class="keyword">case</span> <span class="string">"row_query"</span>:</span><br><span class="line">				rowQueries = <span class="built_in">append</span>(rowQueries, processor)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 根据CallbackProcessor 的before after 等信息，最这个slice进行排序，以便顺序调用</span></span><br><span class="line">	c.creates = sortProcessors(creates)</span><br><span class="line">	c.updates = sortProcessors(updates)</span><br><span class="line">	c.deletes = sortProcessors(deletes)</span><br><span class="line">	c.queries = sortProcessors(queries)</span><br><span class="line">	c.rowQueries = sortProcessors(rowQueries)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>到这里，我们就看到了这些回调函数是怎么注册上来的，后面就是看一下，Query对应的回调函数，到底干了什么，才会导致 First 返回<code>ErrRecordNotFound</code> , 而Find 返回nil的区别</p>
+<h2 id="回调"><a href="#回调" class="headerlink" title="回调"></a>回调</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">queryCallback</span><span class="params">(scope *Scope)</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> _, skip := scope.InstanceGet(<span class="string">"gorm:skip_query_callback"</span>); skip &#123;</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//we are only preloading relations, dont touch base model</span></span><br><span class="line">	<span class="keyword">if</span> _, skip := scope.InstanceGet(<span class="string">"gorm:only_preload"</span>); skip &#123;</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">defer</span> scope.trace(scope.db.nowFunc())</span><br><span class="line"></span><br><span class="line">	<span class="keyword">var</span> (</span><br><span class="line">		isSlice, isPtr <span class="keyword">bool</span></span><br><span class="line">		resultType     reflect.Type</span><br><span class="line">		results        = scope.IndirectValue()</span><br><span class="line">	)</span><br><span class="line">	<span class="comment">// 判断是否有根据primary key 排序的设置，有的话，追加order排序条件</span></span><br><span class="line">	<span class="keyword">if</span> orderBy, ok := scope.Get(<span class="string">"gorm:order_by_primary_key"</span>); ok &#123;</span><br><span class="line">		<span class="keyword">if</span> primaryField := scope.PrimaryField(); primaryField != <span class="literal">nil</span> &#123;</span><br><span class="line">			scope.Search.Order(fmt.Sprintf(<span class="string">"%v.%v %v"</span>, scope.QuotedTableName(), scope.Quote(primaryField.DBName), orderBy))</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> value, ok := scope.Get(<span class="string">"gorm:query_destination"</span>); ok &#123;</span><br><span class="line">		results = indirect(reflect.ValueOf(value))</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 判断接收数据的变量的类型，并进行处理</span></span><br><span class="line">	<span class="keyword">if</span> kind := results.Kind(); kind == reflect.Slice &#123;</span><br><span class="line">		isSlice = <span class="literal">true</span></span><br><span class="line">		resultType = results.Type().Elem()</span><br><span class="line">		results.Set(reflect.MakeSlice(results.Type(), <span class="number">0</span>, <span class="number">0</span>))</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> resultType.Kind() == reflect.Ptr &#123;</span><br><span class="line">			isPtr = <span class="literal">true</span></span><br><span class="line">			resultType = resultType.Elem()</span><br><span class="line">		&#125;</span><br><span class="line">	&#125; <span class="keyword">else</span> <span class="keyword">if</span> kind != reflect.Struct &#123;</span><br><span class="line">		scope.Err(errors.New(<span class="string">"unsupported destination, should be slice or struct"</span>))</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 拼接sql</span></span><br><span class="line">	scope.prepareQuerySQL()</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> !scope.HasError() &#123;</span><br><span class="line">		scope.db.RowsAffected = <span class="number">0</span></span><br><span class="line">		<span class="keyword">if</span> str, ok := scope.Get(<span class="string">"gorm:query_option"</span>); ok &#123;</span><br><span class="line">			scope.SQL += addExtraSpaceIfExist(fmt.Sprint(str))</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="comment">// 执行拼接好的sql</span></span><br><span class="line">		<span class="keyword">if</span> rows, err := scope.SQLDB().Query(scope.SQL, scope.SQLVars...); scope.Err(err) == <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">defer</span> rows.Close()</span><br><span class="line"></span><br><span class="line">			columns, _ := rows.Columns()</span><br><span class="line">			<span class="keyword">for</span> rows.Next() &#123;</span><br><span class="line">        <span class="comment">// 记录RowsAffected</span></span><br><span class="line">				scope.db.RowsAffected++</span><br><span class="line"></span><br><span class="line">				elem := results</span><br><span class="line">				<span class="keyword">if</span> isSlice &#123;</span><br><span class="line">					elem = reflect.New(resultType).Elem()</span><br><span class="line">				&#125;</span><br><span class="line"></span><br><span class="line">				scope.scan(rows, columns, scope.New(elem.Addr().Interface()).Fields())</span><br><span class="line">				<span class="comment">// 数据追加到接收的结果集里面</span></span><br><span class="line">				<span class="keyword">if</span> isSlice &#123;</span><br><span class="line">					<span class="keyword">if</span> isPtr &#123;</span><br><span class="line">						results.Set(reflect.Append(results, elem.Addr()))</span><br><span class="line">					&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">						results.Set(reflect.Append(results, elem))</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="comment">// 判断是否有错，有错误，就返回错误信息</span></span><br><span class="line">			<span class="keyword">if</span> err := rows.Err(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">				scope.Err(err)</span><br><span class="line">			&#125; <span class="keyword">else</span> <span class="keyword">if</span> scope.db.RowsAffected == <span class="number">0</span> &amp;&amp; !isSlice &#123;</span><br><span class="line">        <span class="comment">// 如果RowsAffected == 0，也就是没有数据，且接收的结果集不是 slice，就报 ErrRecordNotFound 的错误</span></span><br><span class="line">				scope.Err(ErrRecordNotFound)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>至此，我们可以看出，跟Find 还是 First函数没有太大的关系，而是跟传递的接收结果的变量有关，如果接收结果的变量时slice，那么就不会报<code>ErrRecordNotFound</code> </p>
+<h1 id="进一步验证"><a href="#进一步验证" class="headerlink" title="进一步验证"></a>进一步验证</h1><p>我们修改一下demo中的main函数</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	db := open()</span><br><span class="line">	user := &amp;User&#123;&#125;</span><br><span class="line">	users := <span class="built_in">make</span>([]*User, <span class="number">0</span>, <span class="number">0</span>)</span><br><span class="line">	err := db.Model(user).Where(<span class="string">"id = ?"</span>, <span class="number">1</span>).First(&amp;users).Error</span><br><span class="line">	db.Table(user.TableName()).Model(user)</span><br><span class="line">	fmt.Println(err, user)</span><br><span class="line"></span><br><span class="line">	err = db.Model(user).Where(<span class="string">"id = ?"</span>, <span class="number">1</span>).Find(user).Error</span><br><span class="line">	fmt.Println(err, user)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这时候，按照我们追踪源码得到的结果，应该返回</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&lt;nil&gt; &amp;&#123;0  &#125;</span><br><span class="line">record not found &amp;&#123;0  &#125;</span><br></pre></td></tr></table></figure>
+<p>打印出来结果如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&lt;nil&gt; &amp;&#123;0  &#125;</span><br><span class="line">record not found &amp;&#123;0  &#125;</span><br></pre></td></tr></table></figure>
+<p>甚是完美</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>传入接收结果集的变量只能为Struct类型或Slice类型，当传入变量为Struc类型时，如果检索出来的数据为0条，会抛出ErrRecordNotFound错误，当传入变量为Slice类型时，任何条件下均不会抛出ErrRecordNotFound错误</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/GO/" rel="tag"># GO</a>
+          
+            <a href="/tags/Gorm/" rel="tag"># Gorm</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/posts/4823/" rel="next" title="深入理解Go-map原理剖析">
+                <i class="fa fa-chevron-left"></i> 深入理解Go-map原理剖析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">TY·Loafer</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">72</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">24</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">43</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+            <div class="feed-link motion-element">
+              <a href="/atom.xml" rel="alternate">
+                <i class="fa fa-rss"></i>
+                RSS
+              </a>
+            </div>
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#demo"><span class="nav-number">1.</span> <span class="nav-text">demo</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#结构"><span class="nav-number">2.</span> <span class="nav-text">结构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#DB"><span class="nav-number">2.1.</span> <span class="nav-text">DB</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Scope"><span class="nav-number">2.2.</span> <span class="nav-text">Scope</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SQLCommon"><span class="nav-number">2.3.</span> <span class="nav-text">SQLCommon</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#search"><span class="nav-number">2.4.</span> <span class="nav-text">search</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Callback"><span class="nav-number">2.5.</span> <span class="nav-text">Callback</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CallbackProcessor"><span class="nav-number">2.6.</span> <span class="nav-text">CallbackProcessor</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#新建连接"><span class="nav-number">3.</span> <span class="nav-text">新建连接</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#查询"><span class="nav-number">4.</span> <span class="nav-text">查询</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#查询函数"><span class="nav-number">4.1.</span> <span class="nav-text">查询函数</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#First"><span class="nav-number">4.1.1.</span> <span class="nav-text">First</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Find"><span class="nav-number">4.1.2.</span> <span class="nav-text">Find</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#callCallbacks"><span class="nav-number">4.1.3.</span> <span class="nav-text">callCallbacks</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gorm-初始化"><span class="nav-number">4.2.</span> <span class="nav-text">gorm 初始化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#注册回调"><span class="nav-number">4.3.</span> <span class="nav-text">注册回调</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#回调"><span class="nav-number">4.4.</span> <span class="nav-text">回调</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#进一步验证"><span class="nav-number">5.</span> <span class="nav-text">进一步验证</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">TY·Loafer</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Mist</a> v5.1.4</div>
+
+
+
+
+  <script src="https://unpkg.com/mermaid@7.1.2/dist/mermaid.min.js"></script>
+  <script>
+    if (window.mermaid) {
+      mermaid.initialize({theme: 'forest'});
+    }
+  </script>
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+    
+      <script id="dsq-count-scr" src="https://tyloafer.disqus.com/count.js" async></script>
+    
+
+    
+      <script type="text/javascript">
+        var disqus_config = function () {
+          this.page.url = 'https://tyloafer.github.io/posts/43551/';
+          this.page.identifier = 'posts/43551/';
+          this.page.title = 'GORM之ErrRecordNotFound采坑记录';
+        };
+        var d = document, s = d.createElement('script');
+        s.src = 'https://tyloafer.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      </script>
+    
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
